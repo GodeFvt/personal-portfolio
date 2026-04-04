@@ -1,4 +1,4 @@
-import { Menu, Play, Search } from 'lucide-react';
+import { Menu, Play, Search } from "lucide-react";
 
 interface WorkspaceTopbarProps {
   query: string;
@@ -24,12 +24,13 @@ export default function WorkspaceTopbar({
           type="button"
           className="topbar-icon-button"
           onClick={onToggleCollections}
-          aria-label="Toggle collections panel">
+          aria-label="Toggle collections panel"
+        >
           <Menu size={18} />
         </button>
 
         <div className="workspace-brand">
-          <span className="workspace-brand__name">Phuttinan API Workspace</span>
+          <span className="workspace-brand__name">Phuttinan Workspace</span>
           <span className="workspace-brand__subtitle">portfolio runtime</span>
         </div>
       </div>
@@ -48,7 +49,12 @@ export default function WorkspaceTopbar({
 
       <div className="workspace-topbar__right">
         <span className="live-pill">{status}</span>
-        <button type="button" className="solid-button" onClick={onRunActive} disabled={!canRun}>
+        <button
+          type="button"
+          className="solid-button"
+          onClick={onRunActive}
+          disabled={!canRun}
+        >
           <Play size={15} />
           <span>Run Active</span>
         </button>
