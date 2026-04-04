@@ -95,7 +95,7 @@ export interface EndpointDefinition {
 
 export const identity = {
   name: "Phuttinan Phaksaweang",
-  alias: "GodeFvt",
+  alias: "Got",
   role: "Backend-focused Full-Stack Developer",
   status: "Open to graduate software roles",
   location: "Bangkok, Thailand",
