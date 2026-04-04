@@ -1120,6 +1120,30 @@ a {
   min-width: 0;
 }
 
+.preview-link-row__icon-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+}
+
+.preview-link-row__copy-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.preview-link-row__copy-link {
+  min-width: 0;
+  color: inherit;
+}
+
+.preview-link-row__copy-link:hover strong,
+.preview-link-row__copy-link:hover p {
+  color: var(--text);
+}
+
 .preview-link-row__copy p {
   word-break: break-word;
 }
