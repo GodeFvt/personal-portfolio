@@ -10,6 +10,7 @@ import {
 } from '../lib/runtime';
 import CollectionsPanel from './CollectionsPanel';
 import EmptyWorkspace from './EmptyWorkspace';
+import MobileEndpointDock from './MobileEndpointDock';
 import RequestEditor from './RequestEditor';
 import RequestTabsStrip from './RequestTabsStrip';
 import ResponsePane from './ResponsePane';
@@ -29,6 +30,7 @@ export default function AppShell() {
   const [lastRun, setLastRun] = useState<RequestLog | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(true);
   const [treeExpanded, setTreeExpanded] = useState(true);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<CollectionGroupId, boolean>>({
     profile: true,
     work: true,
@@ -55,6 +57,16 @@ export default function AppShell() {
         window.clearTimeout(copyRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 860px)');
+    const syncMobileLayout = () => setIsMobileLayout(mediaQuery.matches);
+
+    syncMobileLayout();
+    mediaQuery.addEventListener('change', syncMobileLayout);
+
+    return () => mediaQuery.removeEventListener('change', syncMobileLayout);
   }, []);
 
   useEffect(() => {
@@ -156,10 +168,26 @@ export default function AppShell() {
     return text.includes(query.toLowerCase());
   });
 
+  const handleToggleCollections = () => {
+    if (isMobileLayout) {
+      return;
+    }
+
+    setCollectionsOpen((current) => !current);
+  };
+
+  const shouldRenderCollections = !isMobileLayout && collectionsOpen;
+  const activeRailPanel = collectionsOpen ? 'collections' : 'workspace';
+
   return (
     <div className="app-shell">
-      <div className={`studio${collectionsOpen ? '' : ' studio--collections-closed'}`}>
-        <ToolRail onGoHome={() => navigate('/')} />
+      <div className={`studio${shouldRenderCollections ? '' : ' studio--collections-closed'}`}>
+        <ToolRail
+          activePanel={activeRailPanel}
+          onGoHome={() => navigate('/')}
+          onShowWorkspace={() => setCollectionsOpen(false)}
+          onShowCollections={() => setCollectionsOpen(true)}
+        />
 
         <main className="workspace">
           <WorkspaceTopbar
@@ -168,7 +196,7 @@ export default function AppShell() {
             canRun={Boolean(activeEndpoint)}
             onQueryChange={setQuery}
             onRunActive={triggerRequest}
-            onToggleCollections={() => setCollectionsOpen((current) => !current)}
+            onToggleCollections={handleToggleCollections}
           />
 
           <RequestTabsStrip
@@ -199,7 +227,7 @@ export default function AppShell() {
           )}
         </main>
 
-        {collectionsOpen ? (
+        {shouldRenderCollections ? (
           <CollectionsPanel
             query={query}
             filteredEndpoints={filteredEndpoints}
@@ -216,6 +244,10 @@ export default function AppShell() {
             }
             onOpenEndpoint={handleOpenEndpoint}
           />
+        ) : null}
+
+        {isMobileLayout ? (
+          <MobileEndpointDock activeEndpointId={activeEndpointId} onOpenEndpoint={handleOpenEndpoint} />
         ) : null}
       </div>
     </div>
