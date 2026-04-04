@@ -22,7 +22,7 @@ export default function EmptyWorkspace({ onOpenDefault }: EmptyWorkspaceProps) {
             <MapPin size={14} />
             <span>Thailand</span>
           </span>
-          <span className="record-chip">I'm a Fullstack Developer</span>
+          <span className="record-chip">Fullstack Developer</span>
         </div>
       </div>
 
