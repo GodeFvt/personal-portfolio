@@ -970,7 +970,7 @@ a {
 }
 
 .empty-workspace {
-  margin: auto;
+  margin: 24px auto;
   max-width: 420px;
   text-align: center;
   display: grid;
