@@ -212,7 +212,7 @@ export default function AppShell() {
           onShowCollections={() => setCollectionsOpen(true)}
         />
 
-        <main className="workspace">
+        <main className={`workspace${activeEndpoint ? '' : ' workspace--empty'}`}>
           <WorkspaceTopbar
             query={searchQuery}
             status={identity.status}
