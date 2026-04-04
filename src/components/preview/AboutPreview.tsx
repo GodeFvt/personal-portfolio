@@ -1,16 +1,20 @@
 import { education, experience, journey } from '../../data/portfolio';
+import { createSearchAnchorId } from '../../lib/search';
 
 export default function AboutPreview() {
   return (
     <div className="preview-stack">
-      <section className="preview-section">
+      <section className="preview-section" data-search-anchor={createSearchAnchorId('/about', 'education')}>
         <div className="preview-section__header">
           <p className="preview-section__title">Education</p>
           <span className="preview-section__aside">{education.length} records</span>
         </div>
 
         {education.map((item) => (
-          <div key={item.school} className="preview-row">
+          <div
+            key={item.school}
+            className="preview-row"
+            data-search-anchor={createSearchAnchorId('/about', `education-${item.school}`)}>
             <span className="preview-row__label">{item.period}</span>
             <div className="preview-row__value">
               <strong>{item.school}</strong>
@@ -22,14 +26,17 @@ export default function AboutPreview() {
         ))}
       </section>
 
-      <section className="preview-section">
+      <section className="preview-section" data-search-anchor={createSearchAnchorId('/about', 'experience')}>
         <div className="preview-section__header">
           <p className="preview-section__title">Experience</p>
           <span className="preview-section__aside">{experience.length} records</span>
         </div>
 
         {experience.map((item) => (
-          <article key={`${item.role}-${item.company}`} className="preview-entry">
+          <article
+            key={`${item.role}-${item.company}`}
+            className="preview-entry"
+            data-search-anchor={createSearchAnchorId('/about', `experience-${item.role}-${item.company}`)}>
             <div className="preview-entry__top">
               <div>
                 <h3>{item.role}</h3>
@@ -58,14 +65,31 @@ export default function AboutPreview() {
         ))}
       </section>
 
-      <section className="preview-section">
+      <section className="preview-section" data-search-anchor={createSearchAnchorId('/about', 'summary')}>
+        <div className="preview-section__header">
+          <p className="preview-section__title">Summary</p>
+          <span className="preview-section__aside">story arc</span>
+        </div>
+
+        <div className="preview-row">
+          <span className="preview-row__label">Direction</span>
+          <div className="preview-row__value">
+            <p>The path from robotics competitions into backend-focused software delivery and maintainable systems thinking.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="preview-section" data-search-anchor={createSearchAnchorId('/about', 'timeline')}>
         <div className="preview-section__header">
           <p className="preview-section__title">Timeline</p>
           <span className="preview-section__aside">{journey.length} events</span>
         </div>
 
         {journey.map((item) => (
-          <div key={`${item.year}-${item.title}`} className="preview-row">
+          <div
+            key={`${item.year}-${item.title}`}
+            className="preview-row"
+            data-search-anchor={createSearchAnchorId('/about', `journey-${item.year}-${item.title}`)}>
             <span className="preview-row__label">{item.year}</span>
             <div className="preview-row__value">
               <strong>{item.title}</strong>

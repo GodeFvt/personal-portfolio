@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, Code2, Copy, Eye, FileJson2 } from 'lucide-react';
 import type { EndpointDefinition } from '../data/portfolio';
@@ -17,6 +18,8 @@ interface ResponsePaneProps {
   isLoading: boolean;
   onCopy: () => void;
   onChangeTab: (tab: ResponsePaneTab) => void;
+  jumpTargetId: string | null;
+  jumpToken: number;
 }
 
 const responsePaneLabels: Array<{ id: ResponsePaneTab; label: string; icon: LucideIcon }> = [
@@ -36,7 +39,40 @@ export default function ResponsePane({
   isLoading,
   onCopy,
   onChangeTab,
+  jumpTargetId,
+  jumpToken,
 }: ResponsePaneProps) {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!jumpTargetId || isLoading) {
+      return;
+    }
+
+    if (responsePaneTab !== 'preview') {
+      onChangeTab('preview');
+      return;
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      const target = bodyRef.current?.querySelector<HTMLElement>(`[data-search-anchor="${jumpTargetId}"]`);
+
+      if (!target) {
+        return;
+      }
+
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+
+      target.classList.add('preview-anchor--active');
+      window.setTimeout(() => target.classList.remove('preview-anchor--active'), 1600);
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [endpoint.id, jumpTargetId, jumpToken, responsePaneTab, isLoading, onChangeTab]);
+
   return (
     <section className="response-pane">
       <div className="response-pane__header">
@@ -72,7 +108,7 @@ export default function ResponsePane({
         })}
       </div>
 
-      <div className="response-pane__body">
+      <div ref={bodyRef} className="response-pane__body">
         {responsePaneTab === 'preview' ? (
           <div className="response-pane__preview">
             <PreviewPane endpointId={endpoint.id} />

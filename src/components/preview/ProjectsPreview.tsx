@@ -1,10 +1,11 @@
 import { projects } from '../../data/portfolio';
+import { createSearchAnchorId } from '../../lib/search';
 
 export default function ProjectsPreview() {
   return (
     <div className="preview-stack">
       {projects.map((project) => (
-        <section key={project.name} className="preview-section">
+        <section key={project.name} className="preview-section" data-search-anchor={createSearchAnchorId('/project', project.name)}>
           <article className="preview-entry preview-entry--spacious">
             <div>
               <p className="preview-section__title">{project.type}</p>

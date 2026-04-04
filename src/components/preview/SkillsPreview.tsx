@@ -1,10 +1,11 @@
 import { skillGroups, workingTraits } from '../../data/portfolio';
+import { createSearchAnchorId } from '../../lib/search';
 
 export default function SkillsPreview() {
   return (
     <div className="preview-stack">
       {skillGroups.map((group) => (
-        <section key={group.name} className="preview-section">
+        <section key={group.name} className="preview-section" data-search-anchor={createSearchAnchorId('/skills', `group-${group.name}`)}>
           <div className="preview-row preview-row--stack">
             <span className="preview-row__label">{group.name}</span>
             <div className="preview-row__chips">
@@ -18,7 +19,7 @@ export default function SkillsPreview() {
         </section>
       ))}
 
-      <section className="preview-section">
+      <section className="preview-section" data-search-anchor={createSearchAnchorId('/skills', 'working-style')}>
         <div className="preview-section__header">
           <p className="preview-section__title">Working style</p>
           <span className="preview-section__aside">workflow</span>

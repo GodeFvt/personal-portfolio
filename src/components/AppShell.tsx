@@ -8,9 +8,11 @@ import {
   type RequestLog,
   type ResponsePaneTab,
 } from '../lib/runtime';
+import { getSearchSuggestions, type SearchSuggestion } from '../lib/search';
 import CollectionsPanel from './CollectionsPanel';
 import EmptyWorkspace from './EmptyWorkspace';
 import MobileEndpointDock from './MobileEndpointDock';
+import MobileSearchOverlay from './MobileSearchOverlay';
 import RequestEditor from './RequestEditor';
 import RequestTabsStrip from './RequestTabsStrip';
 import ResponsePane from './ResponsePane';
@@ -31,12 +33,16 @@ export default function AppShell() {
   const [collectionsOpen, setCollectionsOpen] = useState(true);
   const [treeExpanded, setTreeExpanded] = useState(true);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collectionsQuery, setCollectionsQuery] = useState('');
+  const [jumpTargetId, setJumpTargetId] = useState<string | null>(null);
+  const [jumpToken, setJumpToken] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<Record<CollectionGroupId, boolean>>({
     profile: true,
     work: true,
     contact: true,
   });
-  const [query, setQuery] = useState('');
 
   const timerRef = useRef<number | null>(null);
   const copyRef = useRef<number | null>(null);
@@ -68,6 +74,12 @@ export default function AppShell() {
 
     return () => mediaQuery.removeEventListener('change', syncMobileLayout);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileLayout) {
+      setIsMobileSearchOpen(false);
+    }
+  }, [isMobileLayout]);
 
   useEffect(() => {
     if (!activeEndpoint) {
@@ -165,8 +177,10 @@ export default function AppShell() {
   const filteredEndpoints = endpointOrder.filter((endpointId) => {
     const endpoint = endpointRegistry[endpointId];
     const text = `${endpoint.id} ${endpoint.label} ${endpoint.summary}`.toLowerCase();
-    return text.includes(query.toLowerCase());
+    return text.includes(collectionsQuery.toLowerCase());
   });
+
+  const searchSuggestions = getSearchSuggestions(searchQuery);
 
   const handleToggleCollections = () => {
     if (isMobileLayout) {
@@ -174,6 +188,15 @@ export default function AppShell() {
     }
 
     setCollectionsOpen((current) => !current);
+  };
+
+  const handleSelectSuggestion = (suggestion: SearchSuggestion) => {
+    setResponsePaneTab('preview');
+    setSearchQuery('');
+    setIsMobileSearchOpen(false);
+    setJumpTargetId(suggestion.anchorId);
+    setJumpToken((current) => current + 1);
+    handleOpenEndpoint(suggestion.endpointId);
   };
 
   const shouldRenderCollections = !isMobileLayout && collectionsOpen;
@@ -191,9 +214,11 @@ export default function AppShell() {
 
         <main className="workspace">
           <WorkspaceTopbar
-            query={query}
+            query={searchQuery}
             status={identity.status}
-            onQueryChange={setQuery}
+            suggestions={searchSuggestions}
+            onQueryChange={setSearchQuery}
+            onSelectSuggestion={handleSelectSuggestion}
             onToggleCollections={handleToggleCollections}
           />
 
@@ -206,7 +231,13 @@ export default function AppShell() {
 
           {activeEndpoint ? (
             <>
-              <RequestEditor endpoint={activeEndpoint} isLoading={isLoading} onSend={triggerRequest} />
+              <RequestEditor
+                endpoint={activeEndpoint}
+                isLoading={isLoading}
+                isMobileLayout={isMobileLayout}
+                onOpenSearch={() => setIsMobileSearchOpen(true)}
+                onSend={triggerRequest}
+              />
               <ResponsePane
                 endpoint={activeEndpoint}
                 headers={runtimeResponse?.headers ?? {}}
@@ -218,6 +249,8 @@ export default function AppShell() {
                 isLoading={isLoading}
                 onCopy={copyResponse}
                 onChangeTab={setResponsePaneTab}
+                jumpTargetId={jumpTargetId}
+                jumpToken={jumpToken}
               />
             </>
           ) : (
@@ -227,12 +260,12 @@ export default function AppShell() {
 
         {shouldRenderCollections ? (
           <CollectionsPanel
-            query={query}
+            query={collectionsQuery}
             filteredEndpoints={filteredEndpoints}
             activeEndpointId={activeEndpointId}
             treeExpanded={treeExpanded}
             expandedGroups={expandedGroups}
-            onQueryChange={setQuery}
+            onQueryChange={setCollectionsQuery}
             onToggleTree={() => setTreeExpanded((current) => !current)}
             onToggleGroup={(groupId) =>
               setExpandedGroups((current) => ({
@@ -243,6 +276,15 @@ export default function AppShell() {
             onOpenEndpoint={handleOpenEndpoint}
           />
         ) : null}
+
+        <MobileSearchOverlay
+          isOpen={isMobileSearchOpen}
+          query={searchQuery}
+          suggestions={searchSuggestions}
+          onClose={() => setIsMobileSearchOpen(false)}
+          onQueryChange={setSearchQuery}
+          onSelectSuggestion={handleSelectSuggestion}
+        />
 
         {isMobileLayout ? (
           <MobileEndpointDock activeEndpointId={activeEndpointId} onOpenEndpoint={handleOpenEndpoint} />
