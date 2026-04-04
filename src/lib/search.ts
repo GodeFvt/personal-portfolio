@@ -24,6 +24,7 @@ export interface SearchSuggestion {
   routeLabel: string;
   sectionLabel: string;
   featured?: boolean;
+  keywords?: string[];
 }
 
 const slugify = (value: string) =>
@@ -35,7 +36,8 @@ const slugify = (value: string) =>
 export const createSearchAnchorId = (endpointId: EndpointId, key: string) =>
   `${endpointId.slice(1)}-${slugify(key)}`;
 
-const routeLabelFor = (endpointId: EndpointId) => `${endpointRegistry[endpointId].method} ${endpointId}`;
+const routeLabelFor = (endpointId: EndpointId) =>
+  `${endpointRegistry[endpointId].method} ${endpointId}`;
 
 const suggestions: SearchSuggestion[] = [
   {
@@ -48,6 +50,7 @@ const suggestions: SearchSuggestion[] = [
     routeLabel: routeLabelFor('/me'),
     sectionLabel: 'Identity',
     featured: true,
+    keywords: [identity.alias, identity.location, identity.headline],
   },
   ...meFacts.map((fact) => ({
     id: `me-fact-${slugify(fact.label)}`,
@@ -69,17 +72,19 @@ const suggestions: SearchSuggestion[] = [
     routeLabel: routeLabelFor('/me'),
     sectionLabel: 'Current roles',
     featured: true,
+    keywords: [role.period],
   })),
   ...projects.map((project) => ({
     id: `project-${slugify(project.name)}`,
     endpointId: '/project' as const,
     anchorId: createSearchAnchorId('/project', project.name),
     title: project.name,
-    detail: `${project.type} · ${project.status}`,
+    detail: `${project.type} | ${project.status}`,
     snippet: project.description,
     routeLabel: routeLabelFor('/project'),
     sectionLabel: 'Projects',
     featured: true,
+    keywords: [project.visibility, project.period, ...project.stack, project.repoUrl ?? '', project.liveUrl ?? ''],
   })),
   {
     id: 'about-summary',
@@ -87,7 +92,8 @@ const suggestions: SearchSuggestion[] = [
     anchorId: createSearchAnchorId('/about', 'summary'),
     title: 'From robotics to software',
     detail: 'Story arc',
-    snippet: 'The path from robotics competitions into backend-focused software delivery.',
+    snippet:
+      'The path from robotics competitions into backend-focused software delivery.',
     routeLabel: routeLabelFor('/about'),
     sectionLabel: 'Summary',
     featured: true,
@@ -98,27 +104,31 @@ const suggestions: SearchSuggestion[] = [
     anchorId: createSearchAnchorId('/about', `education-${item.school}`),
     title: item.school,
     detail: item.degree,
-    snippet: `${item.period} · ${item.location}`,
+    snippet: `${item.period} | ${item.location}`,
     routeLabel: routeLabelFor('/about'),
     sectionLabel: 'Education',
   })),
   ...experience.map((item) => ({
     id: `about-experience-${slugify(`${item.role}-${item.company}`)}`,
     endpointId: '/about' as const,
-    anchorId: createSearchAnchorId('/about', `experience-${item.role}-${item.company}`),
+    anchorId: createSearchAnchorId(
+      '/about',
+      `experience-${item.role}-${item.company}`,
+    ),
     title: item.role,
     detail: item.company,
     snippet: item.bullets[0] ?? item.location,
     routeLabel: routeLabelFor('/about'),
     sectionLabel: 'Experience',
     featured: true,
+    keywords: [item.period, item.location, ...item.stack],
   })),
   ...journey.map((item) => ({
     id: `about-journey-${slugify(`${item.year}-${item.title}`)}`,
     endpointId: '/about' as const,
     anchorId: createSearchAnchorId('/about', `journey-${item.year}-${item.title}`),
     title: item.title,
-    detail: `${item.year} · ${item.tag}`,
+    detail: `${item.year} | ${item.tag}`,
     snippet: item.detail,
     routeLabel: routeLabelFor('/about'),
     sectionLabel: 'Timeline',
@@ -130,7 +140,7 @@ const suggestions: SearchSuggestion[] = [
       anchorId: createSearchAnchorId('/skills', `group-${group.name}`),
       title: group.name,
       detail: 'Skill category',
-      snippet: group.items.join(' · '),
+      snippet: group.items.join(' | '),
       routeLabel: routeLabelFor('/skills'),
       sectionLabel: 'Skill map',
       featured: true,
@@ -197,6 +207,7 @@ const scoreSuggestion = (item: SearchSuggestion, query: string) => {
     snippet: item.snippet.toLowerCase(),
     route: item.routeLabel.toLowerCase(),
     section: item.sectionLabel.toLowerCase(),
+    keywords: item.keywords?.join(' ').toLowerCase() ?? '',
   };
 
   const terms = query
@@ -210,6 +221,7 @@ const scoreSuggestion = (item: SearchSuggestion, query: string) => {
     if (haystacks.title === term) score += 80;
     if (haystacks.title.includes(term)) score += 32;
     if (haystacks.detail.includes(term)) score += 20;
+    if (haystacks.keywords.includes(term)) score += 18;
     if (haystacks.section.includes(term)) score += 16;
     if (haystacks.route.includes(term)) score += 12;
     if (haystacks.snippet.includes(term)) score += 10;
@@ -235,7 +247,11 @@ export const getSearchSuggestions = (query: string, limit = 8) => {
       score: scoreSuggestion(item, normalized),
     }))
     .filter((entry) => entry.score > 0)
-    .sort((left, right) => right.score - left.score || left.item.title.localeCompare(right.item.title))
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.item.title.localeCompare(right.item.title),
+    )
     .slice(0, limit)
     .map((entry) => entry.item);
 };

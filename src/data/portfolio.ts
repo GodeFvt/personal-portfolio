@@ -398,6 +398,23 @@ export const projects: ProjectItem[] = [
     liveUrl: "https://pretest.kanarat.ac.th",
   },
   {
+    name: "Personal Portfolio Runtime",
+    period: "2026 - Present",
+    type: "Live portfolio",
+    visibility: "Public repository",
+    status: "Live",
+    description:
+      "The current portfolio website presented as an API-style workspace inspired by developer tools, with searchable routes and responsive previews.",
+    highlights: [
+      "Built the portfolio around /me, /project, /about, /skills, and /contact routes instead of a traditional landing page.",
+      "Added search suggestions that jump to the right endpoint and scroll directly to matching content sections.",
+      "Prepared the project for deployment with Docker, an Nginx runtime, and responsive desktop-plus-mobile behavior.",
+    ],
+    stack: ["React", "TypeScript", "Vite", "React Router", "CSS", "Docker", "Nginx"],
+    repoUrl: "https://github.com/GodeFvt/personal-portfolio",
+    liveUrl: "https://phuttinan.me/",
+  },
+  {
     name: "Kradan Kanban Board",
     period: "Aug 2024 - Dec 2024",
     type: "Integrated Project",

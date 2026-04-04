@@ -37,6 +37,24 @@ export default function ProjectsPreview() {
                 ))}
               </div>
             </div>
+
+            {project.repoUrl || project.liveUrl ? (
+              <div className="preview-row preview-row--stack">
+                <span className="preview-row__label">Links</span>
+                <div className="preview-row__chips">
+                  {project.repoUrl ? (
+                    <a href={project.repoUrl} target="_blank" rel="noreferrer" className="source-chip source-chip--link">
+                      GitHub
+                    </a>
+                  ) : null}
+                  {project.liveUrl ? (
+                    <a href={project.liveUrl} target="_blank" rel="noreferrer" className="source-chip source-chip--link">
+                      Live
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </article>
         </section>
       ))}

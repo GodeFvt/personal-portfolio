@@ -43,9 +43,14 @@ export default function ResponsePane({
   jumpToken,
 }: ResponsePaneProps) {
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const handledJumpTokenRef = useRef<number>(-1);
 
   useEffect(() => {
     if (!jumpTargetId || isLoading) {
+      return;
+    }
+
+    if (handledJumpTokenRef.current === jumpToken) {
       return;
     }
 
@@ -56,6 +61,8 @@ export default function ResponsePane({
 
     const rafId = window.requestAnimationFrame(() => {
       const target = bodyRef.current?.querySelector<HTMLElement>(`[data-search-anchor="${jumpTargetId}"]`);
+
+      handledJumpTokenRef.current = jumpToken;
 
       if (!target) {
         return;
