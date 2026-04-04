@@ -171,7 +171,7 @@ a {
 
 .workspace-topbar {
   display: grid;
-  grid-template-columns: auto minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 560px) minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   padding: 0 14px;
@@ -194,6 +194,15 @@ a {
 .workspace-brand {
   display: grid;
   gap: 2px;
+}
+
+.workspace-topbar__left {
+  justify-self: start;
+}
+
+.workspace-topbar__right {
+  justify-self: end;
+  justify-content: flex-end;
 }
 
 .workspace-brand__name {
@@ -239,6 +248,11 @@ a {
   border-radius: 11px;
   background: #18191d;
   color: var(--text-soft);
+}
+
+.workspace-topbar .command-bar {
+  width: 100%;
+  justify-self: center;
 }
 
 .command-bar input,
@@ -1062,6 +1076,10 @@ a {
     grid-template-columns: 1fr;
     align-items: stretch;
     padding: 12px;
+  }
+
+  .workspace-topbar .command-bar {
+    width: min(100%, 620px);
   }
 
   .workspace-topbar__right {

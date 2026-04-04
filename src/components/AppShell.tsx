@@ -193,9 +193,7 @@ export default function AppShell() {
           <WorkspaceTopbar
             query={query}
             status={identity.status}
-            canRun={Boolean(activeEndpoint)}
             onQueryChange={setQuery}
-            onRunActive={triggerRequest}
             onToggleCollections={handleToggleCollections}
           />
 
