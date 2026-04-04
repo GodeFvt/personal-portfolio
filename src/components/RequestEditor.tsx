@@ -10,6 +10,14 @@ interface RequestEditorProps {
 export default function RequestEditor({ endpoint, isLoading, onSend }: RequestEditorProps) {
   return (
     <section className="request-editor">
+      <div className="request-editor__mobile-brand">
+        <div>
+          <span className="request-editor__mobile-kicker">Phuttinan Workspace</span>
+          <strong>{endpoint.label}</strong>
+        </div>
+        <span className="request-editor__mobile-method">{endpoint.method}</span>
+      </div>
+
       <div className="request-editor__row">
         <div className="request-method-select">
           <span>{endpoint.method}</span>

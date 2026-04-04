@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 85%;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 90%;
   --bg: #0b0b0d;
   --bg-elevated: #111214;
   --bg-panel: #151618;
@@ -12,7 +12,7 @@
   --text: #f4f5f7;
   --text-soft: #a2a7b1;
   --text-dim: #70757f;
-  --mono: 'IBM Plex Mono', monospace;
+  --mono: "IBM Plex Mono", monospace;
   --endpoint-accent: #00c58e;
   --endpoint-soft: rgba(0, 197, 142, 0.12);
   --endpoint-glow: rgba(0, 197, 142, 0.22);
@@ -104,7 +104,10 @@ a {
   color: var(--text-soft);
   display: grid;
   place-items: center;
-  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
 }
 
 .tool-rail__logo {
@@ -372,6 +375,10 @@ a {
   padding: 10px 14px;
 }
 
+.request-editor__mobile-brand {
+  display: none;
+}
+
 .request-editor__row {
   gap: 8px;
 }
@@ -512,7 +519,12 @@ a {
 .response-pane__loading-bar {
   width: min(360px, 72%);
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--endpoint-accent), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--endpoint-accent),
+    transparent
+  );
   animation: scan 1s linear infinite;
 }
 
@@ -631,7 +643,7 @@ a {
 }
 
 .tree-children::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 6px;
   top: 1px;
@@ -678,7 +690,7 @@ a {
 }
 
 .tree-leaf__branch::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 2px;
   top: 50%;
@@ -1094,6 +1106,48 @@ a {
     padding: 8px 10px;
   }
 
+  .request-editor__mobile-brand {
+    min-height: 32px;
+    margin-bottom: 8px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .request-editor__mobile-brand strong,
+  .request-editor__mobile-kicker,
+  .request-editor__mobile-method {
+    font-family: var(--mono);
+    line-height: 1.1;
+  }
+
+  .request-editor__mobile-brand strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text);
+    font-size: 0.92rem;
+  }
+
+  .request-editor__mobile-kicker {
+    color: var(--text-dim);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .request-editor__mobile-method {
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    background: var(--endpoint-soft);
+    color: var(--endpoint-accent);
+    font-size: 0.68rem;
+  }
+
   .request-editor__meta,
   .request-method-select,
   .request-url__host,
@@ -1247,6 +1301,14 @@ a {
 }
 
 @media (max-width: 640px) {
+  .request-editor__mobile-brand {
+    margin-bottom: 6px;
+  }
+
+  .request-editor__mobile-brand strong {
+    font-size: 0.88rem;
+  }
+
   .response-pane {
     grid-template-rows: 38px 30px minmax(0, 1fr);
   }

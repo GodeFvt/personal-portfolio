@@ -30,7 +30,7 @@ export default function WorkspaceTopbar({
 
         <div className="workspace-brand">
           <span className="workspace-brand__name">Phuttinan API Workspace</span>
-          <span className="workspace-brand__subtitle">Hoppscotch-inspired portfolio runtime</span>
+          <span className="workspace-brand__subtitle">portfolio runtime</span>
         </div>
       </div>
 
