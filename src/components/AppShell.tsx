@@ -25,7 +25,7 @@ export default function AppShell() {
   const activeEndpointId = isEndpointId(location.pathname) ? location.pathname : null;
   const activeEndpoint = activeEndpointId ? endpointRegistry[activeEndpointId] : null;
 
-  const [openTabs, setOpenTabs] = useState<EndpointId[]>(['/me', '/project']);
+  const [openTabs, setOpenTabs] = useState<EndpointId[]>(() => [...endpointOrder]);
   const [responsePaneTab, setResponsePaneTab] = useState<ResponsePaneTab>('preview');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
