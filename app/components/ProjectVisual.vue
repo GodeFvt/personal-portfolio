@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Project } from "~~/shared/data/portfolio";
-const props = defineProps<{ project: Project }>();
+import type { PublicProject } from "~~/shared/types/portfolio-api";
+const props = defineProps<{ project: PublicProject }>();
 const failed = ref(false);
 watch(
   () => props.project.image,

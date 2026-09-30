@@ -1,0 +1,559 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AdminUserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum NavigationVisibility {
+  VISIBLE
+  HIDDEN
+  ARCHIVED
+}
+
+enum PublicationState {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PortfolioTemplate {
+  INTRODUCTION
+  PROJECT_LIST
+  EXPERIENCE_LIST
+  SKILL_LIST
+  CONTACT
+  CUSTOM_PAGE
+}
+
+enum PageBlockType {
+  TEXT
+  IMAGE
+  LINK_LIST
+  PROJECT_GRID
+  TIMELINE
+  SKILL_GROUP
+}
+
+enum MediaProvider {
+  LOCAL
+  VERCEL_BLOB
+}
+
+enum MediaVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum MediaStatus {
+  PENDING
+  READY
+  DELETING
+  FAILED
+}
+
+enum OAuthAttemptIntent {
+  LOGIN
+  LINK
+  TEST
+  REAUTH
+}
+
+model AdminUser {
+  id                   String                @id @default(uuid()) @db.Uuid
+  email                String                @unique
+  emailVerifiedAt      DateTime?
+  passwordHash         String?
+  status               AdminUserStatus       @default(INVITED)
+  sessionVersion       Int                   @default(1)
+  authorizationVersion Int                   @default(1)
+  version              Int                   @default(1)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  sessions             AdminSession[]
+  roles                UserRole[]
+  oauthIdentities      OAuthIdentity[]
+  oauthAttempts        OAuthAttempt[]
+  invitationsCreated   UserInvitation[]      @relation("InvitationCreator")
+  revisions            ContentRevision[]
+  auditLogs            AuditLog[]
+  providerConfigs      OAuthProviderConfig[]
+
+  @@index([status])
+}
+
+model AdminSession {
+  id              String         @id @default(uuid()) @db.Uuid
+  userId          String         @db.Uuid
+  authMethod      String
+  providerId      String?        @db.Uuid
+  authenticatedAt DateTime       @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            AdminUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        OAuthProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  oauthAttempts   OAuthAttempt[]
+
+  @@index([userId, expiresAt])
+  @@index([providerId])
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  key         String           @unique
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)
+  isProtected Boolean          @default(false)
+  version     Int              @default(1)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  key         String           @id
+  description String
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId     String    @db.Uuid
+  roleId     String    @db.Uuid
+  assignedAt DateTime  @default(now())
+  assignedBy String?   @db.Uuid
+  user       AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId        String     @db.Uuid
+  permissionKey String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@index([permissionKey])
+}
+
+model OAuthProvider {
+  id                  String                @id @default(uuid()) @db.Uuid
+  key                 String                @unique
+  type                String
+  label               String
+  enabled             Boolean               @default(false)
+  sortOrder           Int                   @default(0)
+  activeConfigVersion Int?
+  draftConfigVersion  Int?
+  version             Int                   @default(1)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  configs             OAuthProviderConfig[]
+  identities          OAuthIdentity[]
+  attempts            OAuthAttempt[]
+  sessions            AdminSession[]
+}
+
+model OAuthProviderConfig {
+  id              String        @id @default(uuid()) @db.Uuid
+  providerId      String        @db.Uuid
+  configVersion   Int
+  clientId        String
+  encryptedSecret String
+  keyVersion      Int
+  validatedConfig Json
+  testedAt        DateTime?
+  testedById      String?       @db.Uuid
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  provider        OAuthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  testedBy        AdminUser?    @relation(fields: [testedById], references: [id], onDelete: SetNull)
+
+  @@unique([providerId, configVersion])
+  @@index([testedById])
+}
+
+model OAuthIdentity {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @db.Uuid
+  providerId   String        @db.Uuid
+  issuer       String
+  subject      String
+  displayEmail String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         AdminUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     OAuthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, issuer, subject])
+  @@index([userId])
+}
+
+model OAuthAttempt {
+  id                  String             @id @default(uuid()) @db.Uuid
+  stateHash           String             @unique
+  nonceHash           String?
+  pkceVerifier        String?
+  intent              OAuthAttemptIntent
+  providerId          String             @db.Uuid
+  configVersion       Int
+  initiatingUserId    String?            @db.Uuid
+  initiatingSessionId String?            @db.Uuid
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  createdAt           DateTime           @default(now())
+  provider            OAuthProvider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  initiatingUser      AdminUser?         @relation(fields: [initiatingUserId], references: [id], onDelete: Cascade)
+  initiatingSession   AdminSession?      @relation(fields: [initiatingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, expiresAt])
+  @@index([initiatingUserId])
+  @@index([initiatingSessionId])
+}
+
+model UserInvitation {
+  id              String    @id @default(uuid()) @db.Uuid
+  normalizedEmail String
+  intendedRoles   Json
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  invitedById     String    @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  invitedBy       AdminUser @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  @@index([normalizedEmail, expiresAt])
+}
+
+model SiteSettings {
+  id             String        @id @default("00000000-0000-4000-8000-000000000001") @db.Uuid
+  siteName       String
+  logoText       String?
+  footerText     String?
+  seoTitle       String
+  seoDescription String
+  defaultTabId   String?       @db.Uuid
+  displayOptions Json          @default("{}")
+  version        Int           @default(1)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  defaultTab     PortfolioTab? @relation("DefaultTab", fields: [defaultTabId], references: [id], onDelete: SetNull)
+
+  @@index([defaultTabId])
+}
+
+model NavigationGroup {
+  id         String               @id @default(uuid()) @db.Uuid
+  label      String
+  sortOrder  Int
+  visibility NavigationVisibility @default(VISIBLE)
+  version    Int                  @default(1)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  tabs       PortfolioTab[]
+
+  @@unique([sortOrder])
+  @@index([visibility, sortOrder])
+}
+
+model PortfolioTab {
+  id               String            @id @default(uuid()) @db.Uuid
+  groupId          String            @db.Uuid
+  slug             String            @unique
+  label            String
+  description      String
+  icon             String
+  template         PortfolioTemplate
+  sortOrder        Int
+  publicationState PublicationState  @default(DRAFT)
+  version          Int               @default(1)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  group            NavigationGroup   @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  aliases          TabSlugAlias[]
+  blocks           PageBlock[]
+  defaultFor       SiteSettings[]    @relation("DefaultTab")
+
+  @@unique([groupId, sortOrder])
+  @@index([publicationState, groupId, sortOrder])
+}
+
+model TabSlugAlias {
+  id        String       @id @default(uuid()) @db.Uuid
+  oldSlug   String       @unique
+  tabId     String       @db.Uuid
+  createdAt DateTime     @default(now())
+  tab       PortfolioTab @relation(fields: [tabId], references: [id], onDelete: Cascade)
+
+  @@index([tabId])
+}
+
+model PageBlock {
+  id               String           @id @default(uuid()) @db.Uuid
+  tabId            String           @db.Uuid
+  type             PageBlockType
+  sortOrder        Int
+  props            Json
+  publicationState PublicationState @default(DRAFT)
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  tab              PortfolioTab     @relation(fields: [tabId], references: [id], onDelete: Cascade)
+
+  @@unique([tabId, sortOrder])
+  @@index([tabId, publicationState, sortOrder])
+}
+
+model Profile {
+  id                String       @id @default("00000000-0000-4000-8000-000000000002") @db.Uuid
+  name              String
+  alias             String
+  role              String
+  email             String
+  bio               String
+  focus             String
+  interests         Json         @default("[]")
+  location          String
+  legacyPortraitUrl String?
+  legacyResumeUrl   String?
+  portraitMediaId   String?      @db.Uuid
+  resumeMediaId     String?      @db.Uuid
+  version           Int          @default(1)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  portraitMedia     MediaAsset?  @relation("ProfilePortrait", fields: [portraitMediaId], references: [id], onDelete: SetNull)
+  resumeMedia       MediaAsset?  @relation("ProfileResume", fields: [resumeMediaId], references: [id], onDelete: SetNull)
+  education         Education[]
+  socialLinks       SocialLink[]
+
+  @@index([portraitMediaId])
+  @@index([resumeMediaId])
+}
+
+model Education {
+  id          String   @id @default(uuid()) @db.Uuid
+  profileId   String   @db.Uuid
+  degree      String
+  institution String
+  period      String
+  sortOrder   Int
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, sortOrder])
+}
+
+model SocialLink {
+  id        String   @id @default(uuid()) @db.Uuid
+  profileId String   @db.Uuid
+  type      String
+  label     String
+  url       String
+  sortOrder Int
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, type])
+  @@unique([profileId, sortOrder])
+}
+
+model Project {
+  id               String              @id @default(uuid()) @db.Uuid
+  slug             String              @unique
+  name             String
+  category         String
+  period           String
+  summary          String
+  imageAlt         String
+  illustration     String?
+  liveUrl          String?
+  repoUrl          String?
+  coverMediaId     String?             @db.Uuid
+  featured         Boolean             @default(false)
+  archived         Boolean             @default(false)
+  sortOrder        Int
+  publicationState PublicationState    @default(DRAFT)
+  version          Int                 @default(1)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  coverMedia       MediaAsset?         @relation(fields: [coverMediaId], references: [id], onDelete: SetNull)
+  highlights       ProjectHighlight[]
+  technologies     ProjectTechnology[]
+
+  @@index([publicationState, archived, sortOrder])
+  @@index([coverMediaId])
+}
+
+model ProjectHighlight {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  text      String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sortOrder])
+}
+
+model Experience {
+  id               String                 @id @default(uuid()) @db.Uuid
+  company          String
+  fullCompany      String
+  role             String
+  period           String
+  description      String
+  sortOrder        Int
+  publicationState PublicationState       @default(DRAFT)
+  version          Int                    @default(1)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  details          ExperienceDetail[]
+  technologies     ExperienceTechnology[]
+
+  @@unique([company, role, period])
+  @@index([publicationState, sortOrder])
+}
+
+model ExperienceDetail {
+  id           String     @id @default(uuid()) @db.Uuid
+  experienceId String     @db.Uuid
+  text         String
+  sortOrder    Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@unique([experienceId, sortOrder])
+}
+
+model SkillGroup {
+  id           String       @id @default(uuid()) @db.Uuid
+  label        String       @unique
+  icon         String
+  sortOrder    Int          @unique
+  version      Int          @default(1)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  technologies Technology[]
+}
+
+model Technology {
+  id           String                 @id @default(uuid()) @db.Uuid
+  skillGroupId String                 @db.Uuid
+  name         String
+  sortOrder    Int
+  version      Int                    @default(1)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  skillGroup   SkillGroup             @relation(fields: [skillGroupId], references: [id], onDelete: Cascade)
+  projects     ProjectTechnology[]
+  experiences  ExperienceTechnology[]
+
+  @@unique([skillGroupId, name])
+  @@unique([skillGroupId, sortOrder])
+}
+
+model ProjectTechnology {
+  projectId    String     @db.Uuid
+  technologyId String     @db.Uuid
+  sortOrder    Int
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technologyId])
+  @@unique([projectId, sortOrder])
+  @@index([technologyId])
+}
+
+model ExperienceTechnology {
+  experienceId String     @db.Uuid
+  technologyId String     @db.Uuid
+  sortOrder    Int
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([experienceId, technologyId])
+  @@unique([experienceId, sortOrder])
+  @@index([technologyId])
+}
+
+model MediaAsset {
+  id               String          @id @default(uuid()) @db.Uuid
+  provider         MediaProvider
+  storageKey       String          @unique
+  originalName     String
+  mimeType         String
+  size             BigInt
+  width            Int?
+  height           Int?
+  alt              String
+  visibility       MediaVisibility @default(PRIVATE)
+  status           MediaStatus     @default(PENDING)
+  version          Int             @default(1)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  profilePortraits Profile[]       @relation("ProfilePortrait")
+  profileResumes   Profile[]       @relation("ProfileResume")
+  projectCovers    Project[]
+
+  @@index([status, visibility])
+}
+
+model ContentRevision {
+  id          String     @id @default(uuid()) @db.Uuid
+  entityType  String
+  entityId    String     @db.Uuid
+  version     Int
+  snapshot    Json
+  authorId    String?    @db.Uuid
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  author      AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([entityType, entityId, version])
+  @@index([authorId, createdAt])
+}
+
+model AuditLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  actorId    String?    @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json       @default("{}")
+  createdAt  DateTime   @default(now())
+  actor      AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  keyHash   String
+  succeeded Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([keyHash, createdAt])
+}

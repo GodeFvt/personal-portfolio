@@ -1,24 +1,51 @@
 <script setup lang="ts">
-import {
-  profile,
-  projects,
-  experience,
-  skillGroups,
-  archive,
-} from "~~/shared/data/portfolio";
-import {
-  endpoints,
-  isWorkspaceEndpoint,
-  workspaceData,
-  type WorkspaceEndpoint,
-} from "~~/shared/data/workspace";
+import type {
+  ApiEnvelope,
+  PortfolioApiData,
+  PublicProfile,
+  PublicProject,
+  SiteApiData,
+} from "~~/shared/types/portfolio-api";
 
 const route = useRoute();
 const router = useRouter();
-const activeId = computed<WorkspaceEndpoint>(() =>
-  isWorkspaceEndpoint(route.query.endpoint) ? route.query.endpoint : "me",
+const { data: siteResponse, error: siteError } = await useFetch<ApiEnvelope<SiteApiData>>("/api/site", {
+  key: "public-site",
+  retry: 0,
+});
+const site = computed(() => siteResponse.value?.data ?? null);
+const endpoints = computed(() =>
+  (site.value?.groups ?? []).flatMap((group) =>
+    group.tabs.map((tab) => ({ ...tab, group: group.label })),
+  ),
 );
-const requestUrl = computed(() => `/api/portfolio/${activeId.value}`);
+const activeId = computed(() => {
+  const requested = typeof route.query.endpoint === "string" ? route.query.endpoint : "";
+  if (endpoints.value.some((endpoint) => endpoint.slug === requested)) return requested;
+  return site.value?.defaultTabSlug ?? endpoints.value[0]?.slug ?? "";
+});
+const activeEndpoint = computed(() =>
+  endpoints.value.find((endpoint) => endpoint.slug === activeId.value),
+);
+const projectFilter = ref("All projects");
+const requestUrl = computed(() => {
+  const path = `/api/portfolio/${encodeURIComponent(activeId.value)}`;
+  if (activeEndpoint.value?.template !== "project-list") return path;
+  const category =
+    projectFilter.value === "Backend"
+      ? "backend"
+      : projectFilter.value === "Fullstack"
+        ? "fullstack"
+        : "all";
+  return `${path}?page=1&perPage=50&category=${category}`;
+});
+const { data: initialTabResponse } = await useFetch<ApiEnvelope<PortfolioApiData>>(
+  requestUrl.value,
+  {
+    key: `initial-tab-${activeId.value}`,
+    retry: 0,
+  },
+);
 const requestHost = ref("");
 const responseTab = ref<"preview" | "json" | "headers">("preview");
 const search = ref("");
@@ -27,16 +54,18 @@ const sidebarOpen = ref(false);
 const sidebarView = ref<"collections" | "history">("collections");
 const contentPane = ref<HTMLElement>();
 const requestTabs = ref<HTMLElement>();
-const groupNames = ["The developer", "The work", "Say hello"];
+const groupNames = computed(() => site.value?.groups.map((group) => group.label) ?? []);
 const filteredEndpoints = computed(() =>
-  endpoints.filter((endpoint) =>
-    `${endpoint.id} ${endpoint.label} ${endpoint.description}`
+  endpoints.value.filter((endpoint) =>
+    `${endpoint.slug} ${endpoint.label} ${endpoint.description}`
       .toLowerCase()
       .includes(search.value.toLowerCase().trim()),
   ),
 );
 const loading = ref(false);
-const response = shallowRef<unknown>(null);
+const response = shallowRef<ApiEnvelope<PortfolioApiData> | null>(
+  initialTabResponse.value ?? null,
+);
 const responseHeaders = ref<[string, string][]>([]);
 const duration = ref<number | null>(null);
 const status = ref<number | null>(null);
@@ -44,15 +73,13 @@ const requestError = ref("");
 const history = ref<
   {
     id: number;
-    endpoint: WorkspaceEndpoint;
+    endpoint: string;
     status: number | null;
     duration: number;
     time: string;
   }[]
 >([]);
-const responseJson = computed(() =>
-  JSON.stringify(response.value ?? workspaceData[activeId.value], null, 2),
-);
+const responseJson = computed(() => JSON.stringify(response.value, null, 2));
 const responseBytes = computed(
   () => new TextEncoder().encode(responseJson.value).length,
 );
@@ -61,26 +88,142 @@ let requestSequence = 0;
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 const copyNotice = ref("");
 const dialog = ref<HTMLDialogElement>();
-const selectedProject = ref<(typeof projects)[number] | null>(null);
-const projectFilter = ref("All projects");
-const displayedProjects = computed(() =>
-  projects.filter(
-    (project) =>
-      projectFilter.value === "All projects" ||
-      (projectFilter.value === "Backend"
-        ? project.kind === "services"
-        : project.kind !== "services"),
-  ),
+const selectedProject = ref<PublicProject | null>(null);
+const responseData = computed(() => response.value?.data ?? null);
+const activeTemplate = computed(
+  () => responseData.value?.tab.template ?? activeEndpoint.value?.template,
 );
+const emptyProfile: PublicProfile = {
+  name: "",
+  alias: "",
+  role: "",
+  email: "",
+  bio: "",
+  focus: "",
+  interests: [],
+  location: "",
+  portraitUrl: null,
+  resumeUrl: null,
+  education: [],
+  socialLinks: [],
+};
+const profile = computed(() => {
+  const value = responseData.value?.content.profile ?? site.value?.profile ?? emptyProfile;
+  const social = (type: string) =>
+    value.socialLinks.find((link) => link.type === type)?.url ?? "";
+  return {
+    ...value,
+    github: social("github"),
+    linkedin: social("linkedin"),
+    resume: value.resumeUrl ?? social("resume"),
+    portrait: value.portraitUrl,
+  };
+});
+const projects = computed(
+  () => responseData.value?.content.projects ?? responseData.value?.items ?? [],
+);
+const displayedProjects = computed(() => projects.value);
+const archive = computed(() => responseData.value?.content.archive ?? []);
+const experience = computed(() => responseData.value?.content.experience ?? []);
+const skillGroups = computed(() => responseData.value?.content.skillGroups ?? []);
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+function objectValue(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+function blockProps(variant?: string, type?: string) {
+  const block = responseData.value?.blocks.find((item) => {
+    if (type && item.type !== type) return false;
+    return variant ? item.props.variant === variant : true;
+  });
+  return block?.props ?? {};
+}
+const pageHeading = computed(() => {
+  const props = blockProps("heading", "text");
+  return {
+    kicker: stringValue(props.kicker),
+    heading: stringValue(props.heading),
+    description: stringValue(props.content || props.description),
+  };
+});
+const introductionHero = computed(() => {
+  const props = blockProps("hero", "text");
+  const primaryAction = objectValue(props.primaryAction);
+  const secondaryAction = objectValue(props.secondaryAction);
+  return {
+    kicker: stringValue(props.kicker),
+    heading: stringValue(props.heading),
+    description: stringValue(props.description),
+    primaryAction: stringValue(primaryAction.label),
+    secondaryAction: stringValue(secondaryAction.label),
+  };
+});
+const introductionOrigin = computed(() => {
+  const props = blockProps("origin", "text");
+  return {
+    kicker: stringValue(props.kicker),
+    heading: stringValue(props.heading),
+    description: stringValue(props.content),
+  };
+});
+const introductionFocus = computed(() => {
+  const props = blockProps("focus-strip", "skill-group");
+  return {
+    heading: stringValue(props.heading),
+    items: Array.isArray(props.items)
+      ? props.items.filter((item): item is string => typeof item === "string")
+      : [],
+  };
+});
+const introductionProjectsHeading = computed(() => {
+  const props = blockProps(undefined, "project-grid");
+  const heading =
+    props.heading && typeof props.heading === "object" && !Array.isArray(props.heading)
+      ? (props.heading as Record<string, unknown>)
+      : {};
+  return {
+    heading: stringValue(heading.heading),
+    description: stringValue(heading.description),
+  };
+});
+const contactSignoff = computed(() =>
+  stringValue(blockProps("signoff", "text").content),
+);
+const linkListContent = computed(() => {
+  const props = blockProps(undefined, "link-list");
+  const rawLinks = Array.isArray(props.links) ? props.links : [];
+  return {
+    heading: stringValue(props.heading),
+    links: rawLinks
+      .map(objectValue)
+      .map((link) => ({
+        label: stringValue(link.label),
+        url: stringValue(link.url),
+        description: stringValue(link.description),
+      }))
+      .filter((link) => link.label && link.url),
+  };
+});
+const contactSocialLinks = computed(() =>
+  linkListContent.value.links.filter((link) => !link.url.startsWith("mailto:")),
+);
+function linkIcon(url: string) {
+  if (url.includes("github.com")) return "i-lucide-github";
+  if (url.includes("linkedin.com")) return "i-lucide-linkedin";
+  if (url.endsWith(".pdf")) return "i-lucide-file-down";
+  return "i-lucide-link";
+}
 const selectedStack = ref(0);
 const selectedJob = ref(0);
 
 useSeoMeta({
-  title: "Phuttinan Workspace | Backend & Fullstack Developer",
-  description:
-    "Meet Got. Explore real projects, backend systems, and the person behind the APIs in an interactive portfolio workspace.",
-  ogTitle: "Phuttinan Workspace",
-  ogDescription: "A little human. A lot of backend.",
+  title: () => site.value?.settings.seoTitle ?? "Portfolio",
+  description: () => site.value?.settings.seoDescription ?? "",
+  ogTitle: () => site.value?.settings.siteName ?? "Portfolio",
+  ogDescription: () => site.value?.settings.seoDescription ?? "",
   twitterCard: "summary",
 });
 function revealActiveTab() {
@@ -104,13 +247,20 @@ function resetPreviewScroll() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 }
-async function navigate(id: WorkspaceEndpoint) {
+async function navigate(id: string) {
   sidebarOpen.value = false;
   responseTab.value = "preview";
-  await router.push({ path: "/", query: id === "me" ? {} : { endpoint: id } });
+  await router.push({
+    path: "/",
+    query: id === site.value?.defaultTabSlug ? {} : { endpoint: id },
+  });
   resetPreviewScroll();
 }
-watch(activeId, () => {
+function navigateTemplate(template: string) {
+  const endpoint = endpoints.value.find((item) => item.template === template);
+  if (endpoint) navigate(endpoint.slug);
+}
+watch(activeId, async () => {
   requestSequence++;
   requestController?.abort();
   loading.value = false;
@@ -120,7 +270,10 @@ watch(activeId, () => {
   status.value = null;
   requestError.value = "";
   responseTab.value = "preview";
-  nextTick(revealActiveTab);
+  selectedStack.value = 0;
+  selectedJob.value = 0;
+  await nextTick(revealActiveTab);
+  if (import.meta.client && activeId.value) await sendRequest();
 });
 async function sendRequest() {
   if (loading.value) return;
@@ -141,15 +294,14 @@ async function sendRequest() {
       retry: 0,
     });
     if (sequence !== requestSequence) return;
-    response.value = result._data;
+    response.value = result._data as ApiEnvelope<PortfolioApiData>;
     status.value = result.status;
     responseHeaders.value = [...result.headers.entries()];
   } catch (error) {
     if (sequence !== requestSequence) return;
     const fetchError = error as { statusCode?: number };
     status.value = fetchError.statusCode ?? null;
-    requestError.value =
-      "The request could not be completed. You can still explore the saved preview, or send it again.";
+    requestError.value = "The request could not be completed. Please try again.";
   } finally {
     if (sequence === requestSequence) {
       duration.value = Math.round(performance.now() - start);
@@ -181,10 +333,17 @@ async function copy(text: string, label: string) {
   }, 3000);
 }
 async function inspectProject(slug: string) {
-  selectedProject.value =
-    projects.find((project) => project.slug === slug) ?? null;
-  await nextTick();
-  dialog.value?.showModal();
+  try {
+    const result = await $fetch<ApiEnvelope<PublicProject>>(
+      `/api/projects/${encodeURIComponent(slug)}`,
+      { retry: 0 },
+    );
+    selectedProject.value = result.data;
+    await nextTick();
+    dialog.value?.showModal();
+  } catch {
+    requestError.value = "Project details could not be loaded.";
+  }
 }
 function onTabKey(event: KeyboardEvent) {
   if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -217,6 +376,10 @@ onMounted(() => {
   requestHost.value = window.location.host;
   revealActiveTab();
   window.addEventListener("keydown", onShortcut);
+  if (activeId.value) sendRequest();
+});
+watch(projectFilter, () => {
+  if (import.meta.client && activeTemplate.value === "project-list") sendRequest();
 });
 onBeforeUnmount(() => {
   requestController?.abort();
@@ -242,12 +405,12 @@ onBeforeUnmount(() => {
           /></button
         ><NuxtLink to="/" class="ws-logo"
           ><span class="ws-logo-mark">p<span>:</span></span
-          ><strong>phuttinan<span>.workspace</span></strong></NuxtLink
+          ><strong>{{ site?.settings.logoText }}</strong></NuxtLink
         >
       </div>
       <div class="ws-top-context">
-        <UIcon name="i-lucide-folder-open" /><span>Personal workspace</span
-        ><UIcon name="i-lucide-chevron-right" /><span>Portfolio</span>
+        <UIcon name="i-lucide-folder-open" /><span>{{ site?.settings.siteName }}</span
+        ><UIcon name="i-lucide-chevron-right" /><span>{{ activeEndpoint?.label }}</span>
       </div>
       <div class="ws-top-actions">
         <a
@@ -258,7 +421,8 @@ onBeforeUnmount(() => {
           aria-label="View GitHub profile"
           ><UIcon name="i-lucide-github" /></a
         ><a
-          href="/resume/phuttinan-resume.pdf"
+          v-if="profile.resume"
+          :href="profile.resume"
           target="_blank"
           rel="noopener"
           class="ws-resume"
@@ -291,13 +455,13 @@ onBeforeUnmount(() => {
         ><span class="ws-rail-separator" /><button
           class="ws-rail-button"
           aria-label="Open introduction"
-          @click="navigate('me')"
+          @click="navigateTemplate('introduction')"
         >
           <UIcon name="i-lucide-fingerprint" /></button
         ><button
           class="ws-rail-button"
           aria-label="Open contact"
-          @click="navigate('contact')"
+          @click="navigateTemplate('contact')"
         >
           <UIcon name="i-lucide-at-sign" />
         </button>
@@ -345,7 +509,8 @@ onBeforeUnmount(() => {
           <div class="ws-collection-root">
             <UIcon name="i-lucide-chevron-down" /><UIcon
               name="i-lucide-folder"
-            /><span>phuttinan</span><span class="ws-count">5</span>
+            /><span>{{ site?.settings.siteName }}</span
+            ><span class="ws-count">{{ endpoints.length }}</span>
           </div>
           <nav class="ws-collections" aria-label="Portfolio endpoints">
             <template v-for="group in groupNames" :key="group"
@@ -362,14 +527,14 @@ onBeforeUnmount(() => {
                   )"
                   :key="endpoint.id"
                   class="ws-endpoint"
-                  :class="{ active: activeId === endpoint.id }"
-                  :aria-current="activeId === endpoint.id ? 'page' : undefined"
-                  @click="navigate(endpoint.id)"
+                  :class="{ active: activeId === endpoint.slug }"
+                  :aria-current="activeId === endpoint.slug ? 'page' : undefined"
+                  @click="navigate(endpoint.slug)"
                 >
                   <span class="ws-method mono">GET</span
-                  ><span class="mono">/{{ endpoint.id }}</span
+                  ><span class="mono">/{{ endpoint.slug }}</span
                   ><span
-                    v-if="activeId === endpoint.id"
+                    v-if="activeId === endpoint.slug"
                     class="ws-active-dot"
                   />
                 </button></div
@@ -408,13 +573,19 @@ onBeforeUnmount(() => {
         </div>
         <div class="ws-sidebar-bottom">
           <div class="ws-owner">
-            <img src="/images/profile.jpg" alt="" width="32" height="32" />
+            <img
+              v-if="profile.portrait"
+              :src="profile.portrait"
+              alt=""
+              width="32"
+              height="32"
+            />
             <div>
-              <strong>Phuttinan Phaksaweng</strong
-              ><span>Backend & Fullstack Developer</span>
+              <strong>{{ profile.name }}</strong
+              ><span>{{ profile.role }}</span>
             </div>
           </div>
-          <p>A person. Some projects.<br />A few well-defined endpoints.</p>
+          <p>{{ profile.bio }}</p>
           <a :href="`mailto:${profile.email}`"
             >Let's connect <UIcon name="i-lucide-arrow-up-right"
           /></a>
@@ -429,12 +600,12 @@ onBeforeUnmount(() => {
           <button
             v-for="endpoint in endpoints"
             :key="endpoint.id"
-            :class="{ active: activeId === endpoint.id }"
-            :aria-current="activeId === endpoint.id ? 'page' : undefined"
-            @click="navigate(endpoint.id)"
+            :class="{ active: activeId === endpoint.slug }"
+            :aria-current="activeId === endpoint.slug ? 'page' : undefined"
+            @click="navigate(endpoint.slug)"
           >
             <span class="ws-method mono">GET</span
-            ><span class="mono">/{{ endpoint.id }}</span
+            ><span class="mono">/{{ endpoint.slug }}</span
             ><UIcon :name="endpoint.icon" />
           </button>
         </nav>
@@ -589,61 +760,54 @@ onBeforeUnmount(() => {
             @after-enter="resetPreviewScroll"
           >
             <div :key="activeId" class="ws-preview">
-              <template v-if="activeId === 'me'">
+              <template v-if="activeTemplate === 'introduction'">
                 <div class="ws-preview-topline">
                   <span class="mono"
                     ><span class="ws-pink">const</span> developer =
                     <span class="ws-muted">a real person</span></span
                   ><span class="ws-preview-location"
-                    ><UIcon name="i-lucide-map-pin" />Bangkok, Thailand</span
+                    ><UIcon name="i-lucide-map-pin" />{{ profile.location }}</span
                   >
                 </div>
                 <section class="ws-intro">
                   <div class="ws-intro-copy">
-                    <p class="ws-kicker">
-                      HEY, I'M GOT <span class="ws-wave">↗</span>
-                    </p>
-                    <h1>A little human.<br />A lot of <span>backend.</span></h1>
+                    <p class="ws-kicker">{{ introductionHero.kicker }}</p>
+                    <h1>{{ introductionHero.heading }}</h1>
                     <p class="ws-full-name">
-                      Phuttinan Phaksaweng <span>/ Developer</span>
+                      {{ profile.name }} <span>/ {{ profile.role }}</span>
                     </p>
-                    <p class="ws-intro-description">
-                      I connect the things you see<br />with the systems you
-                      don't.
-                    </p>
+                    <p class="ws-intro-description">{{ introductionHero.description }}</p>
                     <div class="ws-intro-actions">
                       <button
                         class="ws-pink-button"
-                        @click="navigate('projects')"
+                        @click="navigateTemplate('project-list')"
                       >
-                        Explore my work
+                        {{ introductionHero.primaryAction }}
                         <UIcon name="i-lucide-arrow-up-right" /></button
                       ><button
                         class="ws-subtle-button"
-                        @click="navigate('contact')"
+                        @click="navigateTemplate('contact')"
                       >
-                        Let's talk <UIcon name="i-lucide-arrow-right" />
+                        {{ introductionHero.secondaryAction }}
+                        <UIcon name="i-lucide-arrow-right" />
                       </button>
                     </div>
                   </div>
                   <WorkspacePortraitGraph />
                 </section>
                 <div class="ws-focus-strip">
-                  <span class="mono ws-muted">MY KIND OF WORK</span
-                  ><span><UIcon name="i-lucide-braces" />Backend systems</span
-                  ><span><UIcon name="i-lucide-network" />Connected APIs</span
-                  ><span
-                    ><UIcon name="i-lucide-container" />Real-world
-                    delivery</span
+                  <span class="mono ws-muted">{{ introductionFocus.heading }}</span>
+                  <span v-for="item in introductionFocus.items" :key="item"
+                    ><UIcon name="i-lucide-braces" />{{ item }}</span
                   >
                 </div>
                 <section class="ws-featured">
                   <div class="ws-section-title">
                     <div>
-                      <h2>Less talk. More shipped.</h2>
-                      <p>A few things I've helped bring to life.</p>
+                      <h2>{{ introductionProjectsHeading.heading }}</h2>
+                      <p>{{ introductionProjectsHeading.description }}</p>
                     </div>
-                    <button @click="navigate('projects')">
+                    <button @click="navigateTemplate('project-list')">
                       All projects <UIcon name="i-lucide-arrow-up-right" />
                     </button>
                   </div>
@@ -662,40 +826,31 @@ onBeforeUnmount(() => {
                     <UIcon name="i-lucide-bot" />
                   </div>
                   <div>
-                    <span class="ws-kicker">BEFORE THE APIS</span>
-                    <h2>It started with a robot.</h2>
-                    <p>
-                      LEGO robotics, competitions, and a curiosity about how
-                      things work. That same curiosity now goes into every
-                      system I build.
-                    </p>
+                    <span class="ws-kicker">{{ introductionOrigin.kicker }}</span>
+                    <h2>{{ introductionOrigin.heading }}</h2>
+                    <p>{{ introductionOrigin.description }}</p>
                   </div>
                   <button
                     class="ws-subtle-button"
-                    @click="navigate('experience')"
+                    @click="navigateTemplate('experience-list')"
                   >
                     The journey <UIcon name="i-lucide-arrow-right" />
                   </button>
                 </section>
-                <div class="ws-education">
+                <div v-if="profile.education[0]" class="ws-education">
                   <UIcon name="i-lucide-graduation-cap" />
                   <p>
-                    <strong>B.Sc. Information Technology</strong
-                    ><span
-                      >King Mongkut's University of Technology Thonburi</span
-                    >
+                    <strong>{{ profile.education[0].degree }}</strong
+                    ><span>{{ profile.education[0].institution }}</span>
                   </p>
-                  <span class="mono">2022 - 2026</span>
+                  <span class="mono">{{ profile.education[0].period }}</span>
                 </div>
               </template>
-              <template v-else-if="activeId === 'projects'">
+              <template v-else-if="activeTemplate === 'project-list'">
                 <div class="ws-view-heading">
-                  <span class="ws-kicker">SELECTED WORK</span>
-                  <h1>Ideas, with an <span>implementation.</span></h1>
-                  <p>
-                    School platforms, connected services, and the infrastructure
-                    underneath.
-                  </p>
+                  <span class="ws-kicker">{{ pageHeading.kicker }}</span>
+                  <h1>{{ pageHeading.heading }}</h1>
+                  <p>{{ pageHeading.description }}</p>
                 </div>
                 <div
                   class="ws-project-filters"
@@ -723,34 +878,29 @@ onBeforeUnmount(() => {
                 </div>
                 <section class="ws-archive">
                   <div class="ws-section-title">
-                    <h2>The earlier experiments</h2>
+                    <h2>{{ linkListContent.heading }}</h2>
                     <UIcon name="i-lucide-archive" />
                   </div>
                   <a
                     v-for="item in archive"
                     :key="item.name"
-                    :href="item.url"
+                    :href="item.repoUrl || item.liveUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    ><span class="mono">{{ item.year }}</span>
+                    ><span class="mono">{{ item.period }}</span>
                     <div>
                       <strong>{{ item.name }}</strong>
-                      <p>{{ item.description }}</p>
+                      <p>{{ item.summary }}</p>
                     </div>
                     <UIcon name="i-lucide-arrow-up-right"
                   /></a>
                 </section>
               </template>
-              <template v-else-if="activeId === 'experience'">
+              <template v-else-if="activeTemplate === 'experience-list'">
                 <div class="ws-view-heading">
-                  <span class="ws-kicker">EXPERIENCE</span>
-                  <h1>
-                    Different teams.<br />The same <span>curiosity.</span>
-                  </h1>
-                  <p>
-                    From an internship to freelance delivery and EV charging
-                    systems.
-                  </p>
+                  <span class="ws-kicker">{{ pageHeading.kicker }}</span>
+                  <h1>{{ pageHeading.heading }}</h1>
+                  <p>{{ pageHeading.description }}</p>
                 </div>
                 <div class="ws-experience-workspace">
                   <div
@@ -827,27 +977,23 @@ onBeforeUnmount(() => {
                   </section>
                 </div>
                 <a
-                  href="/resume/phuttinan-resume.pdf"
+                  v-if="profile.resume"
+                  :href="profile.resume"
                   target="_blank"
                   rel="noopener"
                   class="ws-resume-row"
                   ><UIcon name="i-lucide-file-text" /><span
-                    >Want the full picture?<strong
-                      >Take a look at my résumé.</strong
+                    >{{ linkListContent.heading }}<strong
+                      >{{ linkListContent.links[0]?.label }}</strong
                     ></span
                   ><UIcon name="i-lucide-arrow-up-right"
                 /></a>
               </template>
-              <template v-else-if="activeId === 'stack'">
+              <template v-else-if="activeTemplate === 'skill-list'">
                 <div class="ws-view-heading">
-                  <span class="ws-kicker">TECH STACK</span>
-                  <h1>
-                    Backend at heart.<br /><span>Fullstack by practice.</span>
-                  </h1>
-                  <p>
-                    The tools I use to take an idea from architecture to
-                    deployment.
-                  </p>
+                  <span class="ws-kicker">{{ pageHeading.kicker }}</span>
+                  <h1>{{ pageHeading.heading }}</h1>
+                  <p>{{ pageHeading.description }}</p>
                 </div>
                 <div class="ws-stack-visual">
                   <div class="ws-stack-core">
@@ -886,7 +1032,7 @@ onBeforeUnmount(() => {
                     <UIcon :name="group.icon" />{{ group.label }}
                   </button>
                 </div>
-                <section class="ws-stack-items">
+                <section v-if="skillGroups[selectedStack]" class="ws-stack-items">
                   <div
                     v-for="item in skillGroups[selectedStack]!.items"
                     :key="item"
@@ -899,26 +1045,23 @@ onBeforeUnmount(() => {
                   work.
                 </p>
               </template>
-              <template v-else-if="activeId === 'contact'">
+              <template v-else-if="activeTemplate === 'contact'">
                 <div class="ws-contact-preview">
                   <div class="ws-view-heading">
-                    <span class="ws-kicker">LET'S CONNECT</span>
-                    <h1>Good things start<br />with a <span>hello.</span></h1>
-                    <p>
-                      A role, a project, or a particularly interesting backend
-                      problem.<br />I'd be happy to hear about it.
-                    </p>
+                    <span class="ws-kicker">{{ pageHeading.kicker }}</span>
+                    <h1>{{ pageHeading.heading }}</h1>
+                    <p>{{ pageHeading.description }}</p>
                   </div>
                   <div class="ws-contact-card">
                     <div class="ws-contact-postmark" aria-hidden="true">
                       <UIcon name="i-lucide-at-sign" />
                     </div>
-                    <span class="mono">TO: PHUTTINAN</span
+                    <span class="mono">TO: {{ (profile.alias || profile.name).toUpperCase() }}</span
                     ><a :href="`mailto:${profile.email}`"
                       >{{ profile.email }}<UIcon name="i-lucide-arrow-up-right"
                     /></a>
                     <div class="ws-contact-card-bottom">
-                      <span>Best place to reach me.</span
+                      <span>{{ linkListContent.heading }}</span
                       ><button @click="copy(profile.email, 'Email')">
                         <UIcon name="i-lucide-copy" />Copy email
                       </button>
@@ -926,49 +1069,46 @@ onBeforeUnmount(() => {
                   </div>
                   <div class="ws-contact-links">
                     <a
-                      :href="profile.github"
+                      v-for="link in contactSocialLinks"
+                      :key="link.url"
+                      :href="link.url"
                       target="_blank"
                       rel="noopener noreferrer"
-                      ><UIcon name="i-lucide-github" /><span
-                        >GitHub<small>Code & experiments</small></span
-                      ><UIcon name="i-lucide-arrow-up-right" /></a
-                    ><a
-                      :href="profile.linkedin"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      ><UIcon name="i-lucide-linkedin" /><span
-                        >LinkedIn<small>The professional side</small></span
-                      ><UIcon name="i-lucide-arrow-up-right" /></a
-                    ><a href="/resume/phuttinan-resume.pdf" download
-                      ><UIcon name="i-lucide-file-down" /><span
-                        >Résumé<small>Download the full story</small></span
-                      ><UIcon name="i-lucide-arrow-down"
+                      ><UIcon :name="linkIcon(link.url)" /><span
+                        >{{ link.label }}<small>{{ link.description }}</small></span
+                      ><UIcon name="i-lucide-arrow-up-right"
                     /></a>
                   </div>
                   <div class="ws-contact-signoff">
                     <img
-                      src="/images/profile.jpg"
+                      v-if="profile.portrait"
+                      :src="profile.portrait"
                       alt=""
                       width="48"
                       height="48"
                     />
-                    <p>
-                      Thanks for exploring my little corner of the internet.<br /><strong
-                        >Got.</strong
-                      >
-                    </p>
+                    <p>{{ contactSignoff }}</p>
                   </div>
                 </div>
               </template>
+              <template v-else>
+                <PortfolioBlockRenderer
+                  v-for="block in responseData?.blocks ?? []"
+                  :key="block.id"
+                  :block="block"
+                  :content="responseData?.content ?? {}"
+                  @inspect="inspectProject"
+                />
+              </template>
               <footer class="ws-preview-footer">
-                <span>Built with intent. And Nuxt.</span
+                <span>{{ site?.settings.footerText }}</span
                 ><button
-                  v-if="activeId !== 'contact'"
-                  @click="navigate('contact')"
+                  v-if="activeTemplate !== 'contact'"
+                  @click="navigateTemplate('contact')"
                 >
                   Have a conversation
                   <UIcon name="i-lucide-arrow-up-right" /></button
-                ><button v-else @click="navigate('me')">
+                ><button v-else @click="navigateTemplate('introduction')">
                   Back to introduction <UIcon name="i-lucide-arrow-up-left" />
                 </button>
               </footer>

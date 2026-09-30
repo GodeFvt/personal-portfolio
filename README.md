@@ -4,8 +4,19 @@ A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restraine
 
 ## Run
 
+Put the Vercel Prisma Postgres and Blob credentials in the ignored `.env` file. Docker development uses those real services by default:
+
+```sh
+docker compose -f compose.dev.yml up --build app
+```
+
+Or run directly on the host:
+
 ```sh
 npm install
+npm run env:check
+npm run db:deploy
+npm run db:seed
 npm run dev
 npm run typecheck
 npm run build
@@ -19,9 +30,14 @@ Open http://localhost:3000. Node 22.12+ is required. Start production with `node
 - `app/assets/css/main.css`: shared base and project illustrations
 - `app/assets/css/workspace.css`: neutral surfaces and workspace layout
 - `app/components/workspace/`: portrait graph and project cards
-- `shared/data/portfolio.ts`: public profile, work, experience, and image slots
-- `shared/data/workspace.ts`: five endpoint definitions and payloads
-- `server/api/portfolio/[endpoint].get.ts`: actual API requests
+- `app/components/portfolio/`: validated custom-page block renderers
+- `server/services/public-content.ts`: published-only database queries
+- `server/api/site.get.ts`: branding, profile, and dynamic navigation
+- `server/api/portfolio/[slug].get.ts`: published tab content and pagination
+- `server/api/projects/[slug].get.ts`: published project details
+- `server/api/media/[id].get.ts`: permission-checked media streaming
+- `prisma/schema.prisma`: PostgreSQL data model
+- `prisma/seed.ts`: idempotent import source for the original portfolio data
 - `public/images/profile.jpg`: original full-color photo
 - `public/resume/phuttinan-resume.pdf`: current downloadable resume
 
@@ -29,21 +45,20 @@ The previous classic route, its archive, and unused landing-page components have
 
 ## Interactions
 
-Choose `/me`, `/projects`, `/experience`, `/stack`, or `/contact`. Preview displays visual content; JSON and Headers inspect portfolio data and actual server responses. Send makes a real request. Before a request, the interface explicitly shows a saved preview. Timing and history reflect real requests, and endpoint changes cancel pending requests.
+Navigation and tabs come from published database records. Opening the page or changing a tab fetches its API automatically. Preview and JSON render the same response object; Send repeats the current request. Timing and history reflect real requests, and endpoint changes cancel pending requests.
 
 Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, and Escape closes project details or mobile collections. Direct links such as `/?endpoint=projects` are supported. History is session-only, capped at 12 requests.
 
 ## เปลี่ยนข้อมูลและรูป
 
-ข้อมูลหลักอยู่ใน `shared/data/portfolio.ts` ใช้เรซูเม่ล่าสุดเป็นหลักสำหรับชื่อภาษาอังกฤษ ช่วงเวลางาน Gridwhiz, freelance, senior project และ LinkedIn ข้อมูลโปรเจกต์เก่าและรูปโปรไฟล์มาจากพอร์ตเดิม
+ข้อมูลที่หน้าเว็บใช้งานจริงมาจาก PostgreSQL เท่านั้น `shared/data/*` เป็น source สำหรับ seed ครั้งแรกและไม่ถูก import ใน runtime การแก้ผ่าน admin จะเริ่มใน Phase 3; ระหว่างนี้แก้ข้อมูลทดสอบผ่าน Prisma Studio ได้ และการรัน seed ซ้ำจะไม่เขียนทับ record ที่มีอยู่
 
 ปัจจุบันภาพโปรเจกต์เป็น **concept illustration** ไม่ใช่ screenshot ของระบบจริง โดยมีคำว่า CONCEPT กำกับไว้
 
 1. แคปหน้าจอจริงที่ความกว้าง 1440px หรือ 1600px ใช้ข้อมูลตัวอย่างและซ่อนข้อมูลส่วนบุคคล เช่น ชื่อผู้สมัคร เบอร์โทร และผลสอบ
 2. บันทึกเป็น WebP หรือ PNG แนะนำขนาด 1600 × 1000px (อัตราส่วน 8:5) ไม่เกินประมาณ 300KB
-3. วางไฟล์ใน `public/images/projects/`
-4. เปลี่ยน `image: null` ของโปรเจกต์นั้นในไฟล์ข้อมูลเป็น `image: '/images/projects/pretest.webp'` และแก้ `imageAlt` ให้ตรงกับภาพ
-5. ถ้าไม่มีภาพหรือไฟล์โหลดไม่ได้ ระบบจะใช้ concept illustration อัตโนมัติ
+3. รูปโปรไฟล์และเรซูเม่ถูกนำเข้า private Blob แล้ว และหน้าเว็บอ่านผ่าน `/api/media/:id`; อย่าใส่ private Blob URL ลงหน้าเว็บโดยตรง
+4. Phase 4 จะเพิ่ม workflow อัปโหลด/ตรวจสอบ completion สำหรับไฟล์โปรเจกต์ผ่าน admin
 
 | Project               | Suggested filename | ภาพที่แนะนำ                                                                |
 | --------------------- | ------------------ | -------------------------------------------------------------------------- |
@@ -51,7 +66,7 @@ Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, an
 | School management     | `school.webp`      | ภาพรวมระบบ หรือ architecture diagram ที่ตรวจสอบกับ implementation จริงแล้ว |
 | Kradan Kanban         | `kradan.webp`      | หน้าบอร์ดพร้อมคอลัมน์และงานตัวอย่าง                                        |
 
-รูปโปรไฟล์อยู่ที่ `public/images/profile.jpg` เปลี่ยนได้โดยใช้ชื่อเดิม แนะนำภาพแนวตั้งที่มีพื้นที่รอบศีรษะ เรซูเม่ดาวน์โหลดอยู่ที่ `public/resume/phuttinan-resume.pdf`
+Preview และ Docker dev ใช้รูปโปรไฟล์/เรซูเม่จาก private Blob จริงแล้ว ส่วน concept illustration ของโปรเจกต์ยังคงเดิมจนกว่าจะมีไฟล์จริง
 
 ## Design and validation
 

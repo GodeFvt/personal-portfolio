@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Project } from "~~/shared/data/portfolio";
-defineProps<{ project: Project; compact?: boolean }>();
+import type { PublicProject } from "~~/shared/types/portfolio-api";
+defineProps<{ project: PublicProject; compact?: boolean }>();
 const emit = defineEmits<{ inspect: [slug: string] }>();
 </script>
 

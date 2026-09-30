@@ -6,19 +6,35 @@
     "dev": "nuxt dev --host 0.0.0.0",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck"
+    "postinstall": "prisma generate && nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "env:check": "tsx scripts/check-env.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "media:dry-run": "tsx scripts/import-media.ts --dry-run",
+    "media:import:preview": "tsx scripts/import-media.ts --apply --prefix preview"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "@vercel/blob": "2.8.0",
     "nuxt": "^4.5.2",
-    "tailwindcss": "^4.2.0"
+    "pg": "8.23.0",
+    "tailwindcss": "^4.2.0",
+    "zod": "4.6.5"
   },
   "overrides": {
     "esbuild": "^0.28.2"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.0",
+    "@types/pg": "8.16.0",
+    "prisma": "7.10.0",
+    "tsx": "4.23.15",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   }

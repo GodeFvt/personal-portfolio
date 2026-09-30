@@ -1,7 +1,7 @@
 # แผนพัฒนา Portfolio Backend & Admin
 
 วันที่: 30 กันยายน 2026  
-สถานะ: แผนสำหรับตรวจทานก่อนลงมือ — ยังไม่ติดตั้งแพ็กเกจ เปลี่ยนแอป เชื่อมบริการ หรือ deploy
+สถานะ: Phase 1–2 ทำเสร็จแล้ว — ตรวจทั้ง PostgreSQL local, Docker dev ที่ใช้ Prisma Postgres/Vercel Blob จริง และ Vercel Preview ของ branch `portfolio-v2`; ยังไม่เริ่ม Phase 3 และยังไม่ deploy Production
 
 ## 1. เป้าหมาย
 
@@ -468,17 +468,17 @@ Deploy checklist เพิ่มการลงทะเบียน callback �
 
 ### Phase 1 — Foundation และ data migration
 
-- [ ] ตรึง dependency versions ที่เข้ากันได้ ตั้ง DB client, schemas, response helpers และ env validation
-- [ ] สร้าง migration, dev Compose และ seed จาก portfolio/workspace เดิม รวมข้อความที่ฝังอยู่ในหน้าเว็บ
-- [ ] ออกแบบ import รูป/เรซูเม่เข้า storage และ map media ids; dry-run ก่อนเขียนข้อมูลจริง
-- [ ] ผ่านเมื่อ DB ใหม่แสดงข้อมูลเดิมครบ และ seed ซ้ำไม่ทำลายข้อมูลที่แก้แล้ว
+- [x] ตรึง dependency versions ที่เข้ากันได้ ตั้ง DB client, schemas, response helpers และ env validation
+- [x] สร้าง migration, dev Compose และ seed จาก portfolio/workspace เดิม รวมข้อความที่ฝังอยู่ในหน้าเว็บ
+- [x] ออกแบบ import รูป/เรซูเม่เข้า storage และ map media ids; dry-run ก่อนเขียนข้อมูลจริง
+- [x] ผ่านเมื่อ DB ใหม่แสดงข้อมูลเดิมครบ และ seed ซ้ำไม่ทำลายข้อมูลที่แก้แล้ว (ตรวจด้วย PostgreSQL 17 local และ Prisma Postgres Preview)
 
 ### Phase 2 — Public API และ dynamic frontend
 
-- [ ] สร้าง site/tab/project/media APIs พร้อม envelope, filters, pagination และ published-only policy
-- [ ] เปลี่ยนหน้าเว็บทั้งหมดให้อ่าน API อัตโนมัติ ไม่มี static fallback
-- [ ] แยก renderer ตาม template/block และแก้ sidebar/search/mobile/tab state ให้เป็น dynamic
-- [ ] ผ่านเมื่อเปิดหน้าโดยไม่กด Send ก็เห็นข้อมูลจาก DB, เปลี่ยนแท็บโหลดจริง และ JSON ตรงกับ Preview
+- [x] สร้าง site/tab/project/media APIs พร้อม envelope, filters, pagination และ published-only policy
+- [x] เปลี่ยนหน้าเว็บทั้งหมดให้อ่าน API อัตโนมัติ ไม่มี static fallback
+- [x] แยก renderer ตาม template/block และแก้ sidebar/search/mobile/tab state ให้เป็น dynamic
+- [x] ผ่านเมื่อเปิดหน้าโดยไม่กด Send ก็เห็นข้อมูลจาก DB, เปลี่ยนแท็บโหลดจริง และ JSON ตรงกับ Preview (ตรวจด้วย local, Docker cloud-backed และ Vercel Preview)
 
 ### Phase 3 — Authentication และ Admin
 
