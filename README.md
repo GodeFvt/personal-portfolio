@@ -2,7 +2,7 @@
 
 A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restrained pink accents, and natural-color profile photos.
 
-Current release: `v1.3.1` (the public portfolio and admin share one visual system with System, Light, and Dark themes; authenticated users now bypass the login screen). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
+Current release: `v1.3.2` (the public portfolio and admin share one visual system with System, Light, and Dark themes; authenticated users bypass the login screen; Vercel Functions run in Singapore near the primary audience and database). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
 
 ## Run
 
