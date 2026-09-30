@@ -1,5 +1,9 @@
 # Phase 3 — Authentication and Admin
 
+## Admin loading experience
+
+Admin routes render their working surface immediately and fetch page data lazily. A shape-matched skeleton is shown only for the initial request; existing content remains visible during a refresh. The global route progress line and restrained content fade provide navigation feedback without blocking the sidebar or replacing the entire screen.
+
 ## Implemented checkpoint
 
 - `nuxt-auth-utils` sealed-cookie session with an eight-hour lifetime; the cookie stores only account/session identifiers and the server checks the database on every protected request.

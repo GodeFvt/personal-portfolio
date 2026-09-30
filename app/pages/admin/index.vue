@@ -13,7 +13,7 @@ interface SummaryResponse {
   };
 }
 
-const { data, status, error, refresh } = await useFetch<SummaryResponse>("/api/admin/summary", {
+const { data, error, refresh } = await useLazyFetch<SummaryResponse>("/api/admin/summary", {
   key: "admin-summary",
 });
 
@@ -37,10 +37,8 @@ function published(items: SummaryGroup[] | undefined) {
       <NuxtLink class="admin-secondary-button" to="/" target="_blank">View site <UIcon name="i-lucide-external-link" /></NuxtLink>
     </header>
 
-    <div v-if="status === 'pending'" class="admin-loading-lines" aria-label="Loading overview">
-      <span /><span /><span />
-    </div>
-    <div v-else-if="error" class="admin-empty-state">
+    <AdminSkeleton v-if="!data && !error" variant="overview" :rows="3" />
+    <div v-else-if="error && !data" class="admin-empty-state">
       <strong>Overview is unavailable.</strong>
       <button type="button" @click="() => refresh()">Try again</button>
     </div>
