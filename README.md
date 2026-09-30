@@ -2,7 +2,7 @@
 
 A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restrained pink accents, and natural-color profile photos.
 
-Current release: `v1.2.0` (Phase 3 authentication/admin foundation; Phase 3 remains in progress). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
+Current release: `v1.2.1` (Phase 3 authentication/admin foundation; Phase 3 remains in progress). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
 
 ## Run
 

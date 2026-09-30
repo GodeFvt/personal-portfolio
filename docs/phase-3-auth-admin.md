@@ -3,6 +3,7 @@
 ## Implemented checkpoint
 
 - `nuxt-auth-utils` sealed-cookie session with an eight-hour lifetime; the cookie stores only account/session identifiers and the server checks the database on every protected request.
+- The PostgreSQL adapter caps each Vercel function instance at one pooled connection to avoid exhausting the database when serverless instances scale out; local/Docker development uses at most five.
 - Password login with generic failures, scrypt hashing, DB-backed rate limiting, immediate session revocation, Origin + CSRF checks, and security audit events.
 - Idempotent permission/system-role/provider seed plus operator-only Owner bootstrap and password reset scripts. No default password or public registration exists.
 - Server-side `requireAdmin` and `requirePermission` checks. The admin route middleware is only a navigation aid and is not the security boundary.
