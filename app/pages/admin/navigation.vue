@@ -34,7 +34,7 @@ interface NavigationResponse {
 }
 
 const { adminSession } = useAdminSession();
-const { data, status, error, refresh } = await useFetch<NavigationResponse>("/api/admin/navigation", { key: "admin-navigation" });
+const { data, error, refresh } = await useLazyFetch<NavigationResponse>("/api/admin/navigation", { key: "admin-navigation" });
 const saving = ref(false);
 const notice = ref("");
 const formError = ref("");
@@ -183,8 +183,8 @@ async function publish(revision: Revision) {
     <p v-if="notice" class="admin-notice" role="status">{{ notice }}</p>
     <p v-if="formError" class="admin-form-error admin-page-error" role="alert">{{ formError }}</p>
 
-    <div v-if="status === 'pending'" class="admin-loading-lines"><span /><span /><span /></div>
-    <div v-else-if="error" class="admin-empty-state"><strong>Navigation could not be loaded.</strong><button type="button" @click="() => refresh()">Try again</button></div>
+    <AdminSkeleton v-if="!data && !error" variant="editor" :rows="3" />
+    <div v-else-if="error && !data" class="admin-empty-state"><strong>Navigation could not be loaded.</strong><button type="button" @click="() => refresh()">Try again</button></div>
     <template v-else>
       <section v-if="canWrite" class="admin-editor-grid">
         <form class="admin-editor-pane" @submit.prevent="saveGroupDraft">
