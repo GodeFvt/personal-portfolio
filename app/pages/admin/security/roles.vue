@@ -1,0 +1,7 @@
+<script setup lang="ts">
+definePageMeta({ layout: "admin", middleware: "admin" });
+useSeoMeta({ title: "Roles | Portfolio admin", robots: "noindex, nofollow" });
+interface Response { data: { roles: Array<{ id: string; key: string; name: string; description: string | null; isProtected: boolean; version: number; permissions: Array<{ permissionKey: string }>; _count: { users: number } }> } }
+const { data, status, error, refresh } = await useFetch<Response>("/api/admin/security/roles");
+</script>
+<template><div class="admin-page"><header class="admin-page-header"><div><p class="admin-eyebrow">Access control</p><h1>Roles</h1><p>Permissions are additive. Protected system roles cannot be edited.</p></div></header><div v-if="status === 'pending'" class="admin-loading-lines"><span /><span /></div><div v-else-if="error" class="admin-empty-state"><strong>Roles could not be loaded.</strong><button @click="() => refresh()">Try again</button></div><section v-else class="admin-section admin-role-list"><article v-for="role in data?.data.roles" :key="role.id" class="admin-role-row"><div><p class="admin-eyebrow">{{ role.isProtected ? 'Protected' : 'Custom' }}</p><h2>{{ role.name }}</h2><p>{{ role.description }}</p></div><div class="admin-permission-list"><code v-for="permission in role.permissions" :key="permission.permissionKey">{{ permission.permissionKey }}</code></div><div class="admin-role-count"><strong>{{ role._count.users }}</strong><span>users</span></div></article></section></div></template>

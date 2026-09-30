@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, PageBlockType, PortfolioTemplate, PublicationState } from "../generated/prisma/client";
 import { archive, experience, profile, projects, skillGroups } from "../shared/data/portfolio";
 import { endpoints, workspaceData } from "../shared/data/workspace";
+import { permissionCatalog, systemRoleTemplates } from "../shared/auth/permissions";
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -175,6 +176,52 @@ const blocksByTab: Record<string, { type: PageBlockType; props: object }[]> = {
 };
 
 async function seed() {
+  for (const [key, description] of Object.entries(permissionCatalog)) {
+    await prisma.permission.upsert({
+      where: { key },
+      update: { description },
+      create: { key, description },
+    });
+  }
+
+  for (const [key, template] of Object.entries(systemRoleTemplates)) {
+    const role = await prisma.role.upsert({
+      where: { key },
+      update: {
+        name: template.name,
+        description: template.description,
+        isSystem: true,
+        isProtected: template.protected,
+      },
+      create: {
+        key,
+        name: template.name,
+        description: template.description,
+        isSystem: true,
+        isProtected: template.protected,
+      },
+    });
+    for (const permissionKey of template.permissions) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionKey: { roleId: role.id, permissionKey } },
+        update: {},
+        create: { roleId: role.id, permissionKey },
+      });
+    }
+  }
+
+  for (const [sortOrder, provider] of [
+    { key: "google", type: "google", label: "Continue with Google" },
+    { key: "microsoft", type: "microsoft", label: "Continue with Microsoft" },
+    { key: "github", type: "github", label: "Continue with GitHub" },
+  ].entries()) {
+    await prisma.oAuthProvider.upsert({
+      where: { key: provider.key },
+      update: {},
+      create: { ...provider, sortOrder, enabled: false },
+    });
+  }
+
   const groups = new Map<string, string>();
   for (const [sortOrder, label] of groupOrder.entries()) {
     const group = await prisma.navigationGroup.upsert({
@@ -403,15 +450,16 @@ async function seed() {
     }
   }
 
-  const [groupCount, tabCount, projectCount, experienceCount, technologyCount, blockCount] = await Promise.all([
+  const [groupCount, tabCount, projectCount, experienceCount, technologyCount, blockCount, roleCount] = await Promise.all([
     prisma.navigationGroup.count(),
     prisma.portfolioTab.count(),
     prisma.project.count(),
     prisma.experience.count(),
     prisma.technology.count(),
     prisma.pageBlock.count(),
+    prisma.role.count(),
   ]);
-  console.log({ groupCount, tabCount, projectCount, experienceCount, technologyCount, blockCount });
+  console.log({ groupCount, tabCount, projectCount, experienceCount, technologyCount, blockCount, roleCount });
 }
 
 seed()

@@ -14,16 +14,21 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
+    "admin:reset-password": "tsx scripts/reset-admin-password.ts",
+    "auth:setup-local-env": "tsx scripts/setup-auth-env.ts",
     "media:dry-run": "tsx scripts/import-media.ts --dry-run",
     "media:import:preview": "tsx scripts/import-media.ts --apply --prefix preview"
   },
   "dependencies": {
+    "@adonisjs/hash": "9.1.1",
     "@nuxt/ui": "^4.11.2",
     "@pinia/nuxt": "1.0.2",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "@vercel/blob": "2.8.0",
     "nuxt": "^4.5.2",
+    "nuxt-auth-utils": "0.5.30",
     "pg": "8.23.0",
     "pinia": "4.0.3",
     "tailwindcss": "^4.2.0",
@@ -40,5 +45,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

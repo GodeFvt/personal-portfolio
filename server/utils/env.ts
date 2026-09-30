@@ -16,6 +16,10 @@ const serverEnvSchema = z
     LOCAL_STORAGE_DIR: z.string().min(1).default(".data/media"),
     BLOB_STORE_ID: z.string().min(1).optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+    NUXT_SESSION_PASSWORD: z.string().min(32).optional(),
+    NUXT_PUBLIC_SITE_URL: z.string().url().default("http://localhost:3000"),
+    OAUTH_SECRET_KEYS: z.string().min(1).optional(),
+    OAUTH_ACTIVE_KEY_VERSION: z.coerce.number().int().positive().optional(),
   })
   .superRefine((env, context) => {
     if (![env.DATABASE_URL, env.POSTGRES_URL, env.PRISMA_DATABASE_URL].some(isPostgresUrl)) {
@@ -32,6 +36,13 @@ const serverEnvSchema = z
         path: ["BLOB_READ_WRITE_TOKEN"],
         message:
           "Vercel Blob needs project OIDC on Vercel or BLOB_READ_WRITE_TOKEN outside Vercel.",
+      });
+    }
+    if ((process.env.NODE_ENV === "production" || process.env.VERCEL) && !env.NUXT_SESSION_PASSWORD) {
+      context.addIssue({
+        code: "custom",
+        path: ["NUXT_SESSION_PASSWORD"],
+        message: "NUXT_SESSION_PASSWORD must contain at least 32 characters in production.",
       });
     }
   });

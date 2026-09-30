@@ -2,7 +2,7 @@
 
 A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restrained pink accents, and natural-color profile photos.
 
-Current release: `v1.1.0` (Phase 1–2). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
+Current release: `v1.2.0` (Phase 3 authentication/admin foundation; Phase 3 remains in progress). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
 
 ## Run
 
@@ -25,6 +25,8 @@ npm run build
 ```
 
 Open http://localhost:3000. Node 22.12+ is required. Start production with `node .output/server/index.mjs` and set `PORT` if needed. Use a Node/Nitro-capable host for the API.
+
+Before using `/admin`, run `npm run auth:setup-local-env`, `npm run db:seed`, then set temporary `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables and run `npm run admin:bootstrap`. The bootstrap refuses to run once an active Owner exists. See `docs/phase-3-auth-admin.md` for the implemented security boundary and remaining Phase 3 scope.
 
 ## Structure
 
