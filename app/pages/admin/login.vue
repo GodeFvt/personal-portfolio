@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: false });
+definePageMeta({ layout: false, middleware: "admin-guest" });
 
 const email = ref("");
 const password = ref("");
@@ -31,17 +31,14 @@ async function submit() {
 
 <template>
   <main class="admin-login-page">
-    <header class="admin-login-topbar">
-      <NuxtLink class="admin-brand" to="/">
-        <span class="admin-brand-mark">p<span>:</span></span>
-        <strong>phuttinan<span>.workspace</span></strong>
-      </NuxtLink>
+    <NuxtLink class="admin-wordmark admin-login-brand" to="/"><span>p:</span> control</NuxtLink>
+    <div class="admin-login-theme">
       <ThemeControl />
-    </header>
+    </div>
     <section class="admin-login-panel" aria-labelledby="admin-login-title">
       <p class="admin-route-label"><span>POST</span> /admin/session</p>
-      <h1 id="admin-login-title">Welcome back.</h1>
-      <p class="admin-login-intro">Sign in to manage portfolio content, publishing, and access.</p>
+      <h1 id="admin-login-title">Sign in to manage the portfolio.</h1>
+      <p class="admin-login-intro">Password access is available to invited administrators only.</p>
 
       <form class="admin-form" @submit.prevent="submit">
         <label>
@@ -58,7 +55,6 @@ async function submit() {
           <UIcon :name="submitting ? 'i-lucide-loader-circle' : 'i-lucide-arrow-right'" :class="{ 'admin-spin': submitting }" />
         </button>
       </form>
-      <p class="admin-login-footnote">Sessions expire after 8 hours and can be revoked immediately.</p>
     </section>
   </main>
 </template>
