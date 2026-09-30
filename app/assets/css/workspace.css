@@ -320,13 +320,6 @@
   color: #e89abb;
   letter-spacing: 0.015em;
 }
-.ws-active-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #e89abb;
-  margin-left: auto;
-}
 .ws-sidebar-bottom {
   margin-top: auto;
   padding: 20px 17px 22px;
@@ -2451,4 +2444,72 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Shared light palette. The workspace keeps the same information hierarchy and
+   rose accent while surfaces become paper-white rather than color-inverted. */
+html.light .ws-app {
+  --page: #f4f4f1;
+  --panel: #fbfbf8;
+  --panel-2: #ffffff;
+  --text: #1c1c1a;
+  --muted: #656560;
+  --line: #d8d8d2;
+  --accent: #ae3f70;
+  --accent-ink: #ffffff;
+  --ws-pink: #ae3f70;
+  color-scheme: light;
+}
+html.light .ws-app :is(.ws-topbar,.ws-request-tabs,.ws-statusbar) { background: #fbfbf8; }
+html.light .ws-app :is(.ws-rail,.ws-main) { background: #f4f4f1; }
+html.light .ws-app .ws-sidebar { background: #fbfbf8; }
+html.light .ws-app :is(.ws-search,.ws-request-field) { border-color: #d4d4ce; background: #ffffff; }
+html.light .ws-app :is(.ws-icon:hover,.ws-rail-button:hover,.ws-endpoint:hover,.ws-request-tabs > button:hover) { background: #e9e9e4; }
+html.light .ws-app :is(.ws-rail-button.active,.ws-endpoint.active,.ws-request-tabs > button.active,.ws-project-filters button[aria-pressed="true"],.ws-job-selector > button[aria-pressed="true"],.ws-sidebar-mobile-tabs > button[aria-pressed="true"]) { border-color: #ddb8c8; color: var(--ws-pink); background: #f2dce5; }
+html.light .ws-app :is(.ws-logo-mark,.ws-send,.ws-pink-button,.ws-copy-toast) { color: #ffffff; background: var(--ws-pink); }
+html.light .ws-app :is(.ws-method,.ws-pink,.ws-kicker,.ws-status-ok,.ws-section-title > button,.ws-preview-footer button,.ws-preview-footer a,.ws-view-heading h1 > span,.ws-intro h1 > span,.ws-stack-items .iconify,.ws-contact-links > a > .iconify:first-child,.ws-code-lines code,.ws-empty-state > .iconify,.ws-history .ws-clear-history,.ws-empty-search button,.ws-sidebar-bottom > a,.ws-education > .iconify,.ws-archive > a > .iconify,.ws-job-selector > button > .iconify,.ws-job-detail li > .iconify,.ws-resume-row > .iconify,.ws-stack-flow > div > .iconify,.ws-status-pink) { color: var(--ws-pink); }
+html.light .ws-app .ws-response-tabs > button[aria-selected="true"] { border-bottom-color: var(--ws-pink); color: var(--ws-pink); }
+html.light .ws-app .ws-stack-tabs > button[aria-pressed="true"] { border-color: var(--ws-pink); color: var(--ws-pink); }
+html.light .ws-app :is(.ws-top-context > span:last-child,.ws-request-field > code,.ws-full-name,.ws-education strong,.ws-job-selector strong,.ws-stack-flow > div > span,.ws-stack-items > div,.ws-contact-links span,.ws-contact-signoff strong,.ws-code-heading,.ws-headers-view th) { color: #292927; }
+html.light .ws-app :is(.ws-top-context,.ws-icon,.ws-request-tabs > button,.ws-response-tabs > button,.ws-response-meta,.ws-preview-location,.ws-app .ws-intro-description,.ws-focus-strip > span:not(:first-child),.ws-app .ws-section-title p,.ws-app .ws-origin p,.ws-education,.ws-view-heading > p,.ws-project-filters > .mono,.ws-archive p,.ws-job-selector small,.ws-job-selector > button > span > span,.ws-app .ws-job-summary,.ws-job-detail li,.ws-resume-row,.ws-stack-flow small,.ws-stack-tabs > button,.ws-app .ws-stack-footnote,.ws-contact-links small,.ws-contact-signoff p,.ws-statusbar,.ws-line-number,.ws-headers-view td,.ws-empty-state p,.ws-dialog-period,.ws-app .ws-dialog-summary,.ws-dialog-inner ul) { color: #656560; }
+html.light .ws-app .ws-resume { border-color: #d4d4ce; color: var(--ws-pink); background: #ffffff; }
+html.light .ws-app .ws-request-field > .ws-method { border-right-color: #d8d8d2; }
+html.light .ws-app .ws-request-field > .ws-method .iconify { color: #777771; }
+html.light .ws-app .ws-request-field > code > span { color: #777771; }
+html.light .ws-app .ws-content { scrollbar-color: #c7c7c0 #f4f4f1; }
+html.light .ws-app .ws-skeleton { background: #f4f4f1; }
+html.light .ws-app :is(.ws-skeleton-line,.ws-skeleton-card) { border-color: #ddddd7; background: #e9e9e4; }
+html.light .ws-app :is(.ws-skeleton-line,.ws-skeleton-card)::after { background: linear-gradient(90deg, transparent, rgb(255 255 255 / 70%), transparent); }
+html.light .ws-app .ws-origin-symbol { color: var(--ws-pink); background: #ecece7; }
+html.light .ws-app :is(.ws-job-marker,.ws-job-art,.ws-stack-visual,.ws-tags > span,.ws-contact-card,.ws-empty-state,.ws-detail-flow) { border-color: #d6d6d0; background: #ffffff; }
+html.light .ws-app :is(.ws-job-marker,.ws-job-art > .iconify,.ws-job-art > span,.ws-tags > span) { color: var(--ws-pink); }
+html.light .ws-app .ws-stack-core { color: #ffffff; background: var(--ws-pink); box-shadow: 7px 8px 0 #d2d2cc; }
+html.light .ws-app .ws-contact-card { color: #1c1c1a; }
+html.light .ws-app .ws-contact-card-bottom { border-top-color: #c9c9c2; }
+html.light .ws-app .ws-contact-links > a { border-bottom-color: #d8d8d2; }
+html.light .ws-app .ws-error { border-bottom-color: #dfb6c8; color: #8f2856; background: #f5e3ea; }
+html.light .ws-app .ws-code-view { background: #fbfbf8; }
+html.light .ws-app .ws-code-heading { border-bottom-color: #d8d8d2; }
+html.light .ws-app .ws-headers-view th { border-bottom-color: #c9c9c2; }
+html.light .ws-app .ws-headers-view td { border-bottom-color: #e0e0da; }
+html.light .ws-app .ws-project-dialog { border-color: #d0d0ca; color: #1c1c1a; background: #fbfbf8; box-shadow: 0 30px 90px rgb(31 31 28 / 18%); }
+html.light .ws-app .ws-project-dialog::backdrop { background: rgb(238 238 233 / 82%); }
+html.light .ws-app :is(.ws-project-info > p:first-child,.ws-project-description,.ws-project-tech) { color: #656560; }
+html.light .ws-app .ws-project-info > button { color: #252523; }
+html.light .ws-app .ws-project-info > button:hover { color: var(--ws-pink); }
+html.light .ws-app .ws-project-info > button .iconify { color: #777771; }
+html.light .ws-app .ws-subtle-button { color: #50504c; }
+html.light .ws-app .ws-subtle-button:hover { color: var(--ws-pink); }
+html.light .ws-app .ws-project-filters button { color: #5f5f5a; }
+html.light .ws-app .graph-paper { background-image: radial-gradient(#bdbdb6 1px, transparent 1px); }
+html.light .ws-app .graph-connectors { stroke: #a1a19a; }
+html.light .ws-app .graph-portrait { border-color: #cfcfc8; background: #ffffff; box-shadow: 12px 18px 0 #dfdfd9; }
+html.light .ws-app .graph-photo-caption { color: #252523; }
+html.light .ws-app .graph-node { border-color: #cfcfc8; color: #54544f; background: #ffffff; box-shadow: 0 5px 0 #d9d9d3; }
+html.light .ws-app .graph-node[aria-pressed="true"] { border-color: var(--ws-pink); color: #ffffff; background: var(--ws-pink); }
+html.light .ws-app .graph-note { color: #656560; }
+
+@media (max-width: 900px) {
+  .ws-topbar .theme-control > button span { display: none; }
+  .ws-topbar .theme-control > button { min-width: 30px; padding-inline: 7px; }
 }

@@ -1,5 +1,11 @@
 # Phase 3 — Authentication and Admin
 
+## Unified interface and themes
+
+The public portfolio and admin now use the same brand rhythm, typography, semantic color tokens, and restrained pink accent. Both surfaces support System, Light, and Dark preferences through one shared theme control, with the choice persisted by Nuxt Color Mode. The admin information architecture is unchanged, but its hierarchy, page context, navigation, forms, and loading states are denser and easier to scan.
+
+This is a Phase 3 interface checkpoint only. It does not advance the remaining authentication, OAuth, or content-editor scope listed below.
+
 ## Admin loading experience
 
 Admin routes render their working surface immediately and fetch page data lazily. A shape-matched skeleton is shown only for the initial request; existing content remains visible during a refresh. The global route progress line and restrained content fade provide navigation feedback without blocking the sidebar or replacing the entire screen.

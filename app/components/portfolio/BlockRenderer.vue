@@ -96,7 +96,7 @@ const links = computed(() => {
   font-size: clamp(28px, 5vw, 52px);
 }
 .ws-custom-text p {
-  color: #a7a7a7;
+  color: var(--muted);
   line-height: 1.8;
 }
 .ws-custom-image img {
