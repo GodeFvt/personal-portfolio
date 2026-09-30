@@ -77,7 +77,7 @@ const emit = defineEmits<{ inspect: [slug: string] }>();
 }
 .ws-project-info > p:first-child {
   font: 9px var(--font-mono);
-  color: #9e9e9e;
+  color: var(--muted);
   margin-bottom: 9px;
 }
 .ws-project-info > button {
@@ -90,21 +90,21 @@ const emit = defineEmits<{ inspect: [slug: string] }>();
   font-size: 17px;
   font-weight: 500;
   letter-spacing: -0.045em;
-  color: #ececec;
+  color: var(--text);
   line-height: 1.4;
 }
 .ws-project-info > button .iconify {
-  color: #909090;
+  color: var(--muted);
   font-size: 16px;
   flex-shrink: 0;
 }
 .ws-project-info > button:hover {
-  color: #e89abb;
+  color: var(--ws-pink);
 }
 .ws-project-description {
   font-size: 12px;
   line-height: 1.8;
-  color: #a0a0a0;
+  color: var(--muted);
   margin-top: 14px;
 }
 .ws-project-tech {
@@ -113,7 +113,7 @@ const emit = defineEmits<{ inspect: [slug: string] }>();
   gap: 5px 13px;
   margin-top: 12px;
   font-size: 8px;
-  color: #a4a4a4;
+  color: var(--muted);
 }
 .ws-project-card :deep(.project-visual) {
   height: 220px;

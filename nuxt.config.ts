@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   routeRules: {
     "/images/**": { headers: { "cache-control": "public, max-age=86400" } },
   },
-  colorMode: { preference: "dark", fallback: "dark" },
+  colorMode: { preference: "system", fallback: "dark", classSuffix: "" },
   app: {
     head: {
       htmlAttrs: { lang: "en" },

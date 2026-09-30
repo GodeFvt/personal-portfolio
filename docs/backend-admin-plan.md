@@ -1,7 +1,7 @@
 # แผนพัฒนา Portfolio Backend & Admin
 
 วันที่: 1 ตุลาคม 2026
-สถานะ: Phase 1–2 ทำเสร็จแล้วและออก release `v1.1.0`; Phase 3 กำลังดำเนินการ โดย auth foundation, Owner bootstrap/recovery, session revocation, DB-backed login rate limit, CSRF, RBAC catalog, security read APIs, encrypted provider drafts และ navigation draft/publish vertical slice ทำเสร็จแล้ว แต่ invitation/role mutations, live OAuth adapters และ content editors ที่เหลือยังไม่ถือว่าเสร็จ; update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
+สถานะ: Phase 1–2 ทำเสร็จแล้วและออก release `v1.1.0`; Phase 3 กำลังดำเนินการ โดย auth foundation, Owner bootstrap/recovery, session revocation, DB-backed login rate limit, CSRF, RBAC catalog, security read APIs, encrypted provider drafts, navigation draft/publish vertical slice และ unified Admin/Portfolio UI พร้อม System/Light/Dark theme ทำเสร็จแล้ว แต่ invitation/role mutations, live OAuth adapters และ content editors ที่เหลือยังไม่ถือว่าเสร็จ; update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
 
 ## 1. เป้าหมาย
 

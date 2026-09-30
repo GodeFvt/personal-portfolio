@@ -60,7 +60,7 @@ const current = computed(() =>
       <UIcon :name="node.icon" /><span>{{ node.id }}</span>
     </button>
     <div class="graph-note" aria-live="polite">
-      <span class="graph-note-dot" /><span>{{ current.caption }}</span>
+      <span>{{ current.caption }}</span>
     </div>
   </div>
 </template>
@@ -202,12 +202,6 @@ const current = computed(() =>
   font: 9px var(--font-mono);
   color: #afafaf;
   min-height: 27px;
-}
-.graph-note-dot {
-  width: 4px;
-  height: 4px;
-  background: #e89abb;
-  border-radius: 50%;
 }
 @media (max-width: 1100px) {
   .graph-portrait {

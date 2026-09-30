@@ -31,11 +31,17 @@ async function submit() {
 
 <template>
   <main class="admin-login-page">
-    <NuxtLink class="admin-wordmark admin-login-brand" to="/"><span>p:</span> control</NuxtLink>
+    <header class="admin-login-topbar">
+      <NuxtLink class="admin-brand" to="/">
+        <span class="admin-brand-mark">p<span>:</span></span>
+        <strong>phuttinan<span>.workspace</span></strong>
+      </NuxtLink>
+      <ThemeControl />
+    </header>
     <section class="admin-login-panel" aria-labelledby="admin-login-title">
-      <p class="admin-eyebrow">Private workspace</p>
-      <h1 id="admin-login-title">Sign in to manage the portfolio.</h1>
-      <p class="admin-login-intro">Password access is available to invited administrators only.</p>
+      <p class="admin-route-label"><span>POST</span> /admin/session</p>
+      <h1 id="admin-login-title">Welcome back.</h1>
+      <p class="admin-login-intro">Sign in to manage portfolio content, publishing, and access.</p>
 
       <form class="admin-form" @submit.prevent="submit">
         <label>
@@ -48,11 +54,11 @@ async function submit() {
         </label>
         <p v-if="errorMessage" class="admin-form-error" role="alert">{{ errorMessage }}</p>
         <button class="admin-primary-button" type="submit" :disabled="submitting">
-          <span>{{ submitting ? "Signing in…" : "Sign in" }}</span>
+          <span>{{ submitting ? "Signing in..." : "Sign in" }}</span>
           <UIcon :name="submitting ? 'i-lucide-loader-circle' : 'i-lucide-arrow-right'" :class="{ 'admin-spin': submitting }" />
         </button>
       </form>
+      <p class="admin-login-footnote">Sessions expire after 8 hours and can be revoked immediately.</p>
     </section>
-    <p class="admin-login-footnote">Sessions expire after 8 hours and can be revoked immediately.</p>
   </main>
 </template>

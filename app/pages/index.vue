@@ -554,7 +554,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="ws-app dark">
+  <div class="ws-app">
     <a class="ws-skip" href="#workspace-content">Skip to preview</a>
     <header class="ws-topbar">
       <div class="ws-brand">
@@ -578,6 +578,7 @@ onBeforeUnmount(() => {
         ><UIcon name="i-lucide-chevron-right" /><span>{{ activeEndpoint?.label }}</span>
       </div>
       <div class="ws-top-actions">
+        <ThemeControl />
         <a
           :href="profile.github"
           target="_blank"
@@ -697,11 +698,7 @@ onBeforeUnmount(() => {
                   @click="navigate(endpoint.slug)"
                 >
                   <span class="ws-method mono">GET</span
-                  ><span class="mono">/{{ endpoint.slug }}</span
-                  ><span
-                    v-if="activeId === endpoint.slug"
-                    class="ws-active-dot"
-                  />
+                  ><span class="mono">/{{ endpoint.slug }}</span>
                 </button></div
             ></template>
             <div v-if="!filteredEndpoints.length" class="ws-empty-search">
