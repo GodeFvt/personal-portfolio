@@ -590,6 +590,78 @@
   max-width: 1220px;
   margin: 0 auto;
 }
+.ws-skeleton {
+  display: grid;
+  align-content: start;
+  min-height: 100%;
+  padding: clamp(32px, 7vw, 96px);
+  gap: 16px;
+  background: #0c0c0c;
+}
+.ws-skeleton-line,
+.ws-skeleton-card {
+  display: block;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #242424;
+  background: #171717;
+}
+.ws-skeleton-line::after,
+.ws-skeleton-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 6%), transparent);
+  animation: ws-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.ws-skeleton-kicker {
+  width: 112px;
+  height: 12px;
+}
+.ws-skeleton-title {
+  width: min(620px, 85%);
+  height: clamp(42px, 7vw, 76px);
+  margin-top: 12px;
+}
+.ws-skeleton-copy {
+  width: min(720px, 95%);
+  height: 16px;
+}
+.ws-skeleton-copy-short {
+  width: min(480px, 70%);
+}
+.ws-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+.ws-skeleton-card {
+  min-height: 180px;
+}
+@keyframes ws-skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-skeleton-line::after,
+  .ws-skeleton-card::after {
+    animation: none;
+  }
+}
+@media (max-width: 767px) {
+  .ws-skeleton {
+    padding: 28px 20px;
+  }
+  .ws-skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+  .ws-skeleton-card {
+    min-height: 120px;
+  }
+}
 .ws-preview-topline {
   display: flex;
   align-items: center;

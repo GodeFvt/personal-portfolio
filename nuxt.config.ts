@@ -1,6 +1,6 @@
 export default defineNuxtConfig({
   compatibilityDate: "2026-09-30",
-  modules: ["@nuxt/ui"],
+  modules: ["@nuxt/ui", "@pinia/nuxt"],
   css: ["~/assets/css/main.css"],
   devtools: { enabled: false },
   nitro: { compressPublicAssets: true },

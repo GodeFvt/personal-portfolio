@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { storeToRefs } from "pinia";
+import {
+  useRequestCacheStore,
+  type RequestCacheEntry,
+  type RequestHistoryEntry,
+} from "~/stores/request-cache";
 import type {
   ApiEnvelope,
   PortfolioApiData,
@@ -9,6 +15,8 @@ import type {
 
 const route = useRoute();
 const router = useRouter();
+const requestCache = useRequestCacheStore();
+const { history } = storeToRefs(requestCache);
 const { data: siteResponse, error: siteError } = await useFetch<ApiEnvelope<SiteApiData>>("/api/site", {
   key: "public-site",
   retry: 0,
@@ -46,6 +54,16 @@ const { data: initialTabResponse } = await useFetch<ApiEnvelope<PortfolioApiData
     retry: 0,
   },
 );
+if (initialTabResponse.value && !requestCache.get(requestUrl.value)) {
+  requestCache.remember({
+    requestKey: requestUrl.value,
+    endpoint: activeId.value,
+    response: initialTabResponse.value,
+    headers: [],
+    status: 200,
+    duration: 0,
+  });
+}
 const requestHost = ref("");
 const responseTab = ref<"preview" | "json" | "headers">("preview");
 const search = ref("");
@@ -66,19 +84,12 @@ const loading = ref(false);
 const response = shallowRef<ApiEnvelope<PortfolioApiData> | null>(
   initialTabResponse.value ?? null,
 );
+const activeResponseKey = ref(initialTabResponse.value ? requestUrl.value : "");
 const responseHeaders = ref<[string, string][]>([]);
 const duration = ref<number | null>(null);
 const status = ref<number | null>(null);
 const requestError = ref("");
-const history = ref<
-  {
-    id: number;
-    endpoint: string;
-    status: number | null;
-    duration: number;
-    time: string;
-  }[]
->([]);
+const servedFromCache = ref(false);
 const responseJson = computed(() => JSON.stringify(response.value, null, 2));
 const responseBytes = computed(
   () => new TextEncoder().encode(responseJson.value).length,
@@ -90,6 +101,7 @@ const copyNotice = ref("");
 const dialog = ref<HTMLDialogElement>();
 const selectedProject = ref<PublicProject | null>(null);
 const responseData = computed(() => response.value?.data ?? null);
+const showSkeleton = computed(() => loading.value && response.value === null);
 const activeTemplate = computed(
   () => responseData.value?.tab.template ?? activeEndpoint.value?.template,
 );
@@ -256,6 +268,16 @@ async function navigate(id: string) {
   });
   resetPreviewScroll();
 }
+async function openHistory(entry: RequestHistoryEntry) {
+  const historyUrl = new URL(entry.requestKey, "http://portfolio.local");
+  const category = historyUrl.searchParams.get("category");
+  if (category === "backend") projectFilter.value = "Backend";
+  else if (category === "fullstack") projectFilter.value = "Fullstack";
+  else if (category === "all") projectFilter.value = "All projects";
+
+  await navigate(entry.endpoint);
+  await loadRequest(false, entry.requestKey);
+}
 function navigateTemplate(template: string) {
   const endpoint = endpoints.value.find((item) => item.template === template);
   if (endpoint) navigate(endpoint.slug);
@@ -273,28 +295,54 @@ watch(activeId, async () => {
   selectedStack.value = 0;
   selectedJob.value = 0;
   await nextTick(revealActiveTab);
-  if (import.meta.client && activeId.value) await sendRequest();
+  if (import.meta.client && activeId.value) await loadRequest();
 });
-async function sendRequest() {
+function restoreCachedResponse(cached: RequestCacheEntry) {
+  response.value = cached.response;
+  activeResponseKey.value = cached.requestKey;
+  status.value = cached.status;
+  duration.value = cached.duration;
+  responseHeaders.value = cached.headers;
+  requestError.value = "";
+  loading.value = false;
+  servedFromCache.value = true;
+}
+async function loadRequest(force = false, preferredKey?: string) {
+  const requestKey = preferredKey ?? requestUrl.value;
+  if (!force) {
+    const cached = requestCache.get(requestKey);
+    if (cached) {
+      requestSequence++;
+      requestController?.abort();
+      restoreCachedResponse(cached);
+      return;
+    }
+  }
+
   if (loading.value) return;
   const sequence = ++requestSequence;
   const endpoint = activeId.value;
   requestController?.abort();
   requestController = new AbortController();
   loading.value = true;
+  servedFromCache.value = false;
   requestError.value = "";
   status.value = null;
   duration.value = null;
-  response.value = null;
-  responseHeaders.value = [];
+  if (activeResponseKey.value !== requestKey) {
+    response.value = null;
+    responseHeaders.value = [];
+    activeResponseKey.value = "";
+  }
   const start = performance.now();
   try {
-    const result = await $fetch.raw(requestUrl.value, {
+    const result = await $fetch.raw(requestKey, {
       signal: requestController.signal,
       retry: 0,
     });
     if (sequence !== requestSequence) return;
     response.value = result._data as ApiEnvelope<PortfolioApiData>;
+    activeResponseKey.value = requestKey;
     status.value = result.status;
     responseHeaders.value = [...result.headers.entries()];
   } catch (error) {
@@ -306,19 +354,34 @@ async function sendRequest() {
     if (sequence === requestSequence) {
       duration.value = Math.round(performance.now() - start);
       loading.value = false;
-      history.value.unshift({
-        id: sequence,
-        endpoint,
-        status: status.value,
-        duration: duration.value,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      });
-      history.value = history.value.slice(0, 12);
+      if (response.value && status.value) {
+        requestCache.remember({
+          requestKey,
+          endpoint,
+          response: response.value,
+          headers: responseHeaders.value,
+          status: status.value,
+          duration: duration.value,
+        });
+      } else {
+        requestCache.recordFailure({
+          requestKey,
+          endpoint,
+          status: status.value,
+          duration: duration.value,
+        });
+      }
     }
   }
+}
+async function sendRequest() {
+  await loadRequest(true);
+}
+function historyTime(createdAt: number) {
+  return new Date(createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 async function copy(text: string, label: string) {
   clearTimeout(copiedTimer);
@@ -376,10 +439,10 @@ onMounted(() => {
   requestHost.value = window.location.host;
   revealActiveTab();
   window.addEventListener("keydown", onShortcut);
-  if (activeId.value) sendRequest();
+  if (activeId.value) loadRequest();
 });
 watch(projectFilter, () => {
-  if (import.meta.client && activeTemplate.value === "project-list") sendRequest();
+  if (import.meta.client && activeTemplate.value === "project-list") loadRequest();
 });
 onBeforeUnmount(() => {
   requestController?.abort();
@@ -556,17 +619,17 @@ onBeforeUnmount(() => {
           <button
             v-for="entry in history"
             :key="entry.id"
-            @click="navigate(entry.endpoint)"
+            @click="openHistory(entry)"
           >
             <span><b class="ws-method mono">GET</b> /{{ entry.endpoint }}</span
             ><small
               >{{ entry.status ?? "Error" }} · {{ entry.duration }} ms
-              <time>{{ entry.time }}</time></small
+              <time>{{ historyTime(entry.createdAt) }}</time></small
             ></button
           ><button
             v-if="history.length"
             class="ws-clear-history"
-            @click="history = []"
+            @click="requestCache.clear()"
           >
             Clear history
           </button>
@@ -671,7 +734,7 @@ onBeforeUnmount(() => {
             ><template v-else-if="status"
               ><span class="ws-status-ok"
                 ><UIcon name="i-lucide-check" />{{ status }} OK</span
-              ><span>{{ duration }} ms</span
+              ><span>{{ servedFromCache ? "Cached" : `${duration} ms` }}</span
               ><span>{{ (responseBytes / 1024).toFixed(1) }} KB</span></template
             ><span v-else class="ws-local-preview">Saved preview</span
             ><button
@@ -696,7 +759,23 @@ onBeforeUnmount(() => {
           :aria-labelledby="`${responseTab}-tab`"
           tabindex="0"
         >
-          <div v-if="responseTab === 'json'" class="ws-code-view">
+          <div
+            v-if="showSkeleton"
+            class="ws-skeleton"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading portfolio content"
+          >
+            <span class="ws-skeleton-line ws-skeleton-kicker" />
+            <span class="ws-skeleton-line ws-skeleton-title" />
+            <span class="ws-skeleton-line ws-skeleton-copy" />
+            <span class="ws-skeleton-line ws-skeleton-copy ws-skeleton-copy-short" />
+            <div class="ws-skeleton-grid" aria-hidden="true">
+              <span v-for="item in 3" :key="item" class="ws-skeleton-card" />
+            </div>
+            <span class="sr-only">Loading…</span>
+          </div>
+          <div v-else-if="responseTab === 'json'" class="ws-code-view">
             <div class="ws-code-heading">
               <div>
                 <UIcon name="i-lucide-file-json" /><span
