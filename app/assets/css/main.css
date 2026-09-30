@@ -1,0 +1,250 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@theme {
+  --font-sans: "Geist", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+}
+:root {
+  color-scheme: dark;
+  --page: #090909;
+  --text: #eeeeee;
+  --accent: #e89abb;
+  --accent-ink: #191919;
+  --image-bg: #181818;
+}
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+summary {
+  cursor: pointer;
+}
+a,
+button,
+summary {
+  transition:
+    color 0.2s,
+    background 0.2s,
+    transform 0.2s;
+}
+button:active {
+  transform: translateY(1px);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+.mono {
+  font-family: var(--font-mono);
+}
+
+.project-visual {
+  height: 310px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--image-bg);
+  display: grid;
+  place-items: center;
+}
+.project-visual > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.visual-caption {
+  position: absolute;
+  bottom: 20px;
+  left: 25px;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: #b2b2b2;
+}
+.registration-art {
+  width: 350px;
+  height: 280px;
+  position: relative;
+  transform: rotate(-7deg);
+  transition: transform 0.5s;
+}
+.ticket {
+  position: absolute;
+  width: 310px;
+  height: 220px;
+  border-radius: 10px;
+}
+.ticket-back {
+  background: #646464;
+  border: 1px solid #8d8d8d;
+  left: 30px;
+  top: 4px;
+  transform: rotate(14deg);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  color: #ebebeb;
+  font: 12px var(--font-mono);
+}
+.ticket-front {
+  top: 48px;
+  left: 0;
+  background: #e89abb;
+  color: #2b2b2b;
+  box-shadow: 0 22px 40px #0e0e0e50;
+  padding: 23px;
+}
+.ticket-front > .mono {
+  font-size: 8px;
+  letter-spacing: 0.13em;
+}
+.ticket-front > .iconify {
+  float: right;
+  font-size: 25px;
+}
+.ticket-front > strong {
+  display: block;
+  font-size: 24px;
+  font-weight: 550;
+  letter-spacing: -1px;
+  line-height: 1.25;
+  margin-top: 23px;
+}
+.ticket-rule {
+  border-top: 1px dashed #959595;
+  margin: 22px -23px 13px;
+}
+.ticket-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7px;
+  letter-spacing: 0.025em;
+}
+.visual-services {
+  background: #1d1d1d;
+}
+.services-art {
+  width: 280px;
+  height: 245px;
+  position: relative;
+  transition: transform 0.5s;
+}
+.service-orbit {
+  position: absolute;
+  border: 1px solid #79797966;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+}
+.orbit-one {
+  width: 240px;
+  height: 165px;
+}
+.orbit-two {
+  width: 160px;
+  height: 240px;
+}
+.service-core {
+  position: absolute;
+  width: 86px;
+  height: 86px;
+  top: 80px;
+  left: 97px;
+  border-radius: 18px;
+  background: #e89abb;
+  box-shadow:
+    0 8px 0 #3d3d3d,
+    0 16px 30px #0e0e0e;
+  display: grid;
+  place-items: center;
+  color: #2b2b2b;
+  transform: rotate(-12deg);
+}
+.service-core > .iconify {
+  font-size: 40px;
+}
+.service-node {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: #282828;
+  border: 1px solid #727272;
+  border-radius: 12px;
+  color: #e89abb;
+  box-shadow: 0 5px 0 #181818;
+  font-size: 22px;
+}
+.node-a {
+  top: 18px;
+  left: 45px;
+}
+.node-b {
+  top: 42px;
+  right: 3px;
+}
+.node-c {
+  bottom: 22px;
+  left: 4px;
+}
+.node-d {
+  bottom: 8px;
+  right: 40px;
+}
+.visual-kanban {
+  background: #202020;
+}
+.kanban-art {
+  display: flex;
+  gap: 14px;
+  transform: rotate(-9deg) skewY(3deg);
+  transition: transform 0.5s;
+}
+.kanban-column {
+  width: 81px;
+}
+.kanban-column > .mono {
+  color: #bababa;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+}
+.kanban-block {
+  height: 53px;
+  margin-top: 12px;
+  background: #404040;
+  border: 1px solid #888888;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  color: #e89abb;
+  box-shadow: 0 5px 0 #171717;
+}
+.kanban-column:last-child .kanban-block {
+  background: #e89abb;
+  color: #303030;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
