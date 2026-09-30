@@ -2,7 +2,7 @@
 
 A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restrained pink accents, and natural-color profile photos.
 
-Current release: `v1.0.0` (Phase 1–2). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
+Current release: `v1.1.0` (Phase 1–2). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
 
 ## Run
 
@@ -47,7 +47,7 @@ The previous classic route, its archive, and unused landing-page components have
 
 ## Interactions
 
-Navigation and tabs come from published database records. Opening the page or changing to an uncached tab fetches its API automatically. Successful responses are stored in a session Pinia cache keyed by the complete request URL; returning through navigation or Request History reuses the cached response, while Send explicitly refreshes it. Uncached requests show a skeleton, Preview and JSON render the same response object, and endpoint changes cancel pending requests.
+Navigation and tabs come from published database records. Opening the page or changing to an uncached tab fetches its API automatically. Successful responses are stored in a session Pinia cache keyed by the complete request URL; returning through navigation or Request History reuses the cached response, while Send explicitly refreshes it. After `/me` is ready, `/contact` is prefetched during browser idle time unless data saving or a slow connection is detected. This bounded prefetch does not create a History item until `/contact` is actually opened. Uncached requests show a skeleton, Preview and JSON render the same response object, and endpoint changes cancel pending requests.
 
 Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, and Escape closes project details or mobile collections. Direct links such as `/?endpoint=projects` are supported. History is session-only, capped at 12 requests.
 

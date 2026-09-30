@@ -21,7 +21,7 @@ All routes use the shared `{ data }` envelope. Errors use `{ data: null, error, 
 
 ## Frontend data flow
 
-The page loads `/api/site` during SSR, resolves the requested/default tab from dynamic navigation, and loads the tab response automatically. Preview and JSON read the same response ref. A Pinia store caches successful responses by complete request URL, including project filters. Navigation and Request History restore cached response bodies, headers, status, and timing without another API call; Send always forces a refresh. Uncached requests render a responsive skeleton, while sequence IDs and `AbortController` prevent slow earlier requests from replacing a newer tab.
+The page loads `/api/site` during SSR, resolves the requested/default tab from dynamic navigation, and loads the tab response automatically. Preview and JSON read the same response ref. A Pinia store caches successful responses by complete request URL, including project filters. Navigation and Request History restore cached response bodies, headers, status, and timing without another API call; Send always forces a refresh. After `/me` completes, the browser idle-prefetches only `/contact`; it skips data-saving and slow connections, and the prefetched response enters Request History only when the user opens that tab. Uncached requests render a responsive skeleton, while sequence IDs and `AbortController` prevent slow earlier requests from replacing a newer tab.
 
 The five built-in templates keep their existing visual treatment. `custom-page` renders validated text, image, link-list, project-grid, timeline, and skill-group blocks through `app/components/portfolio/BlockRenderer.vue`. No raw HTML, Vue template, or JavaScript is evaluated from database content.
 
@@ -32,6 +32,7 @@ The five built-in templates keep their existing visual treatment. `custom-page` 
 - Docker development connected to real Prisma Postgres and private Vercel Blob; page, public APIs, portrait, and resume returned 200.
 - Vercel Preview and Production deployments passed the same page/API/private-media smoke checks. Production is published at `https://portfolio-phuttinan-s-projects.vercel.app`.
 - Browser verification confirmed one initial SSR history entry, skeleton display for an uncached endpoint, cached navigation without a repeat request, and forced refresh through Send.
+- Browser verification confirmed the idle `/contact` prefetch remains absent from History until opened, then renders as `Cached` and records one History entry.
 - SSR reflected a temporary profile value changed only in the database, then the value was restored.
 - Pagination rejects invalid queries and returns empty items with real totals for out-of-range pages.
 - Hidden-group test removed the group from site navigation and returned 404 for its tab; visibility was restored.

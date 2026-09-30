@@ -96,6 +96,10 @@ const responseBytes = computed(
 );
 let requestController: AbortController | undefined;
 let requestSequence = 0;
+let contactPrefetchController: AbortController | undefined;
+let contactPrefetchPromise: Promise<RequestCacheEntry | undefined> | undefined;
+let contactIdleHandle: number | undefined;
+let contactFallbackTimer: ReturnType<typeof setTimeout> | undefined;
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 const copyNotice = ref("");
 const dialog = ref<HTMLDialogElement>();
@@ -282,6 +286,78 @@ function navigateTemplate(template: string) {
   const endpoint = endpoints.value.find((item) => item.template === template);
   if (endpoint) navigate(endpoint.slug);
 }
+function contactRequest() {
+  const endpoint = endpoints.value.find((item) => item.slug === "contact");
+  if (!endpoint) return null;
+  return {
+    endpoint: endpoint.slug,
+    requestKey: `/api/portfolio/${encodeURIComponent(endpoint.slug)}`,
+  };
+}
+function canPrefetch() {
+  const connection = (
+    navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }
+  ).connection;
+  return !connection?.saveData && !["slow-2g", "2g"].includes(connection?.effectiveType ?? "");
+}
+async function prefetchContact() {
+  const contact = contactRequest();
+  if (!contact || requestCache.get(contact.requestKey)) {
+    return contact ? requestCache.get(contact.requestKey) : undefined;
+  }
+
+  contactPrefetchController = new AbortController();
+  const start = performance.now();
+  try {
+    const result = await $fetch.raw<ApiEnvelope<PortfolioApiData>>(contact.requestKey, {
+      signal: contactPrefetchController.signal,
+      retry: 0,
+    });
+    if (!result._data) return undefined;
+    return requestCache.prime({
+      requestKey: contact.requestKey,
+      endpoint: contact.endpoint,
+      response: result._data,
+      headers: [...result.headers.entries()],
+      status: result.status,
+      duration: Math.round(performance.now() - start),
+    });
+  } catch {
+    return undefined;
+  } finally {
+    contactPrefetchController = undefined;
+  }
+}
+function scheduleContactPrefetch() {
+  const contact = contactRequest();
+  if (
+    !contact ||
+    !canPrefetch() ||
+    requestCache.get(contact.requestKey) ||
+    contactPrefetchPromise ||
+    contactIdleHandle !== undefined ||
+    contactFallbackTimer !== undefined
+  ) {
+    return;
+  }
+
+  const run = () => {
+    contactIdleHandle = undefined;
+    contactFallbackTimer = undefined;
+    const promise = prefetchContact();
+    contactPrefetchPromise = promise;
+    void promise.then(() => {
+      if (contactPrefetchPromise === promise) contactPrefetchPromise = undefined;
+    });
+  };
+  if ("requestIdleCallback" in window) {
+    contactIdleHandle = window.requestIdleCallback(run, { timeout: 1500 });
+  } else {
+    contactFallbackTimer = setTimeout(run, 700);
+  }
+}
 watch(activeId, async () => {
   requestSequence++;
   requestController?.abort();
@@ -295,7 +371,10 @@ watch(activeId, async () => {
   selectedStack.value = 0;
   selectedJob.value = 0;
   await nextTick(revealActiveTab);
-  if (import.meta.client && activeId.value) await loadRequest();
+  if (import.meta.client && activeId.value) {
+    await loadRequest();
+    if (activeId.value === "me") scheduleContactPrefetch();
+  }
 });
 function restoreCachedResponse(cached: RequestCacheEntry) {
   response.value = cached.response;
@@ -314,8 +393,23 @@ async function loadRequest(force = false, preferredKey?: string) {
     if (cached) {
       requestSequence++;
       requestController?.abort();
+      requestCache.ensureHistory(cached);
       restoreCachedResponse(cached);
       return;
+    }
+
+    const contact = contactRequest();
+    if (contactPrefetchPromise && contact?.requestKey === requestKey) {
+      loading.value = true;
+      servedFromCache.value = false;
+      const prefetched = await contactPrefetchPromise;
+      if (requestUrl.value !== requestKey) return;
+      loading.value = false;
+      if (prefetched) {
+        requestCache.ensureHistory(prefetched);
+        restoreCachedResponse(prefetched);
+        return;
+      }
     }
   }
 
@@ -435,17 +529,25 @@ function onShortcut(event: KeyboardEvent) {
   }
   if (event.key === "Escape") sidebarOpen.value = false;
 }
-onMounted(() => {
+onMounted(async () => {
   requestHost.value = window.location.host;
   revealActiveTab();
   window.addEventListener("keydown", onShortcut);
-  if (activeId.value) loadRequest();
+  if (activeId.value) {
+    await loadRequest();
+    if (activeId.value === "me") scheduleContactPrefetch();
+  }
 });
 watch(projectFilter, () => {
   if (import.meta.client && activeTemplate.value === "project-list") loadRequest();
 });
 onBeforeUnmount(() => {
   requestController?.abort();
+  contactPrefetchController?.abort();
+  if (contactIdleHandle !== undefined && "cancelIdleCallback" in window) {
+    window.cancelIdleCallback(contactIdleHandle);
+  }
+  if (contactFallbackTimer !== undefined) clearTimeout(contactFallbackTimer);
   clearTimeout(copiedTimer);
   window.removeEventListener("keydown", onShortcut);
 });

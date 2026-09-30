@@ -1,7 +1,7 @@
 # แผนพัฒนา Portfolio Backend & Admin
 
 วันที่: 30 กันยายน 2026  
-สถานะ: Phase 1–2 ทำเสร็จแล้วและออก release `v1.0.0` — ตรวจทั้ง PostgreSQL local, Docker dev ที่ใช้ Prisma Postgres/Vercel Blob จริง, Vercel Preview และ Vercel Production; response ฝั่ง public มี Pinia session cache และ skeleton loading; ยังไม่เริ่ม Phase 3 โดย update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
+สถานะ: Phase 1–2 ทำเสร็จแล้วและออก release `v1.1.0` — ตรวจทั้ง PostgreSQL local, Docker dev ที่ใช้ Prisma Postgres/Vercel Blob จริง, Vercel Preview และ Vercel Production; response ฝั่ง public มี Pinia session cache, skeleton loading และ idle prefetch เฉพาะ `/contact` หลัง `/me`; ยังไม่เริ่ม Phase 3 โดย update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
 
 ## 1. เป้าหมาย
 
