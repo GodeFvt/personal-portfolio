@@ -30,7 +30,7 @@ The five built-in templates keep their existing visual treatment. `custom-page` 
 - Migration and seed against PostgreSQL 17 local.
 - All three migrations and the idempotent seed applied to the Prisma Postgres Preview branch.
 - Docker development connected to real Prisma Postgres and private Vercel Blob; page, public APIs, portrait, and resume returned 200.
-- Vercel Preview deployment passed the same page/API/private-media smoke checks. Production was not deployed or modified.
+- Vercel Preview and Production deployments passed the same page/API/private-media smoke checks. Production is published at `https://portfolio-phuttinan-s-projects.vercel.app`.
 - SSR reflected a temporary profile value changed only in the database, then the value was restored.
 - Pagination rejects invalid queries and returns empty items with real totals for out-of-range pages.
 - Hidden-group test removed the group from site navigation and returned 404 for its tab; visibility was restored.

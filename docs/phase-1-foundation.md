@@ -25,7 +25,7 @@ Open `http://localhost:3000`. The local container deliberately clears Vercel dep
 
 ## Vercel environment setup
 
-The local checkout is linked to Vercel project `phuttinan-s-projects/portfolio`. Prisma Postgres `my-prisma-postgres` and private Blob store `my-store` are connected. Preview branch `portfolio-v2` has branch-scoped `STORAGE_PROVIDER=vercel-blob` and `BLOB_READ_WRITE_TOKEN`; the latter is needed because this deployment did not expose Blob OIDC to the Nuxt function runtime.
+The local checkout is linked to Vercel project `phuttinan-s-projects/portfolio`. Prisma Postgres `my-prisma-postgres` and private Blob store `my-store` are connected. Preview branch `portfolio-v2` and Production have `STORAGE_PROVIDER=vercel-blob` plus `BLOB_READ_WRITE_TOKEN`; the latter is needed because these deployments did not expose Blob OIDC to the Nuxt function runtime.
 
 Required now for database migration and seed:
 

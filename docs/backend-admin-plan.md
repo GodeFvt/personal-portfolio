@@ -1,7 +1,7 @@
 # แผนพัฒนา Portfolio Backend & Admin
 
 วันที่: 30 กันยายน 2026  
-สถานะ: Phase 1–2 ทำเสร็จแล้ว — ตรวจทั้ง PostgreSQL local, Docker dev ที่ใช้ Prisma Postgres/Vercel Blob จริง และ Vercel Preview ของ branch `portfolio-v2`; ยังไม่เริ่ม Phase 3 และยังไม่ deploy Production
+สถานะ: Phase 1–2 ทำเสร็จแล้ว — ตรวจทั้ง PostgreSQL local, Docker dev ที่ใช้ Prisma Postgres/Vercel Blob จริง, Vercel Preview และ Vercel Production; รวม `portfolio-v2` เข้า `main` แล้ว และยังไม่เริ่ม Phase 3
 
 ## 1. เป้าหมาย
 
