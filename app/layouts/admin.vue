@@ -6,6 +6,7 @@ const loggingOut = ref(false);
 
 const navigation = [
   { label: "Overview", to: "/admin", icon: "i-lucide-layout-dashboard" },
+  { label: "Content", to: "/admin/content", icon: "i-lucide-file-pen-line" },
   { label: "Navigation", to: "/admin/navigation", icon: "i-lucide-panel-left" },
 ];
 
