@@ -11,6 +11,7 @@
     "test:access": "tsx --test tests/access-control.test.ts",
     "test:oauth": "tsx --test tests/oauth-security.test.ts",
     "test:content": "tsx --test tests/admin-content.test.ts",
+    "test:media": "tsx --test tests/media-security.test.ts",
     "env:check": "tsx scripts/check-env.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -49,5 +50,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.5.1"
+  "version": "1.6.0"
 }

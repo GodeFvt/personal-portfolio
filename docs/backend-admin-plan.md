@@ -496,9 +496,9 @@ Deploy checklist เพิ่มการลงทะเบียน callback �
 
 ### Phase 4 — Media
 
-- [ ] ทำ Vercel/private และ local adapters พร้อม tokenized upload, validation และ completion verification
-- [ ] Media picker, alt text, replace, reference checks และ orphan cleanup
-- [ ] ผ่านเมื่อรูป/เรซูเม่จริงแสดงได้ ขณะ draft/private files เปิดผ่าน public route ไม่ได้
+- [x] ทำ Vercel/private และ local adapters พร้อม tokenized upload, validation และ completion verification
+- [x] Media picker, alt text, replace, reference checks และ orphan cleanup
+- [x] ผ่านเมื่อรูป/เรซูเม่จริงแสดงได้ ขณะ draft/private files เปิดผ่าน public route ไม่ได้
 
 ### Phase 5 — Deployment และส่งมอบ
 

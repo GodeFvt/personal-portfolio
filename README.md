@@ -66,7 +66,7 @@ Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, an
 1. แคปหน้าจอจริงที่ความกว้าง 1440px หรือ 1600px ใช้ข้อมูลตัวอย่างและซ่อนข้อมูลส่วนบุคคล เช่น ชื่อผู้สมัคร เบอร์โทร และผลสอบ
 2. บันทึกเป็น WebP หรือ PNG แนะนำขนาด 1600 × 1000px (อัตราส่วน 8:5) ไม่เกินประมาณ 300KB
 3. รูปโปรไฟล์และเรซูเม่ถูกนำเข้า private Blob แล้ว และหน้าเว็บอ่านผ่าน `/api/media/:id`; อย่าใส่ private Blob URL ลงหน้าเว็บโดยตรง
-4. Phase 4 จะเพิ่ม workflow อัปโหลด/ตรวจสอบ completion สำหรับไฟล์โปรเจกต์ผ่าน admin
+4. อัปโหลดไฟล์ใหม่ผ่าน `/admin/media` หรือ Media picker ในฟอร์ม Content/Navigation ระบบจะตรวจ signature, MIME, ขนาด และ completion ก่อนให้เลือกใช้งาน
 
 | Project               | Suggested filename | ภาพที่แนะนำ                                                                |
 | --------------------- | ------------------ | -------------------------------------------------------------------------- |
@@ -74,7 +74,7 @@ Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, an
 | School management     | `school.webp`      | ภาพรวมระบบ หรือ architecture diagram ที่ตรวจสอบกับ implementation จริงแล้ว |
 | Kradan Kanban         | `kradan.webp`      | หน้าบอร์ดพร้อมคอลัมน์และงานตัวอย่าง                                        |
 
-Preview และ Docker dev ใช้รูปโปรไฟล์/เรซูเม่จาก private Blob จริงแล้ว ส่วน concept illustration ของโปรเจกต์ยังคงเดิมจนกว่าจะมีไฟล์จริง
+ไฟล์ที่เลือกใน private draft จะยังเปิดผ่าน public media route ไม่ได้ เมื่อ publish แล้วระบบจึงเปิดเฉพาะไฟล์ที่ถูกอ้างอิงจากเนื้อหา public จริง รายละเอียดสถาปัตยกรรมและผลทดสอบอยู่ใน `docs/phase-4-media.md` ส่วน concept illustration ของโปรเจกต์ยังคงเดิมจนกว่าจะมีไฟล์จริง
 
 ## Design and validation
 

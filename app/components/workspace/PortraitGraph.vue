@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineProps<{ src?: string | null; alt: string }>();
+
 const selected = ref("build");
 const nodes = [
   {
@@ -36,8 +38,9 @@ const current = computed(() =>
     <div class="graph-portrait">
       <div class="graph-photo">
         <img
-          src="/images/profile.jpg"
-          alt="Got, Phuttinan Phaksaweng"
+          v-if="src"
+          :src="src"
+          :alt="alt"
           width="572"
           height="702"
           fetchpriority="high"

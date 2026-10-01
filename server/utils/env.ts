@@ -16,6 +16,8 @@ const serverEnvSchema = z
     LOCAL_STORAGE_DIR: z.string().min(1).default(".data/media"),
     BLOB_STORE_ID: z.string().min(1).optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+    MEDIA_UPLOAD_SECRET: z.string().min(32).optional(),
+    SCHEDULED_JOB_SECRET: z.string().min(32).optional(),
     NUXT_SESSION_PASSWORD: z.string().min(32).optional(),
     NUXT_PUBLIC_SITE_URL: z.string().url().default("http://localhost:3000"),
     OAUTH_SECRET_KEYS: z.string().min(1).optional(),

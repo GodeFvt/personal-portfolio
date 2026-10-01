@@ -984,7 +984,7 @@ onBeforeUnmount(() => {
                       </button>
                     </div>
                   </div>
-                  <WorkspacePortraitGraph />
+                  <WorkspacePortraitGraph :src="profile.portrait" :alt="`${profile.alias}, ${profile.name}`" />
                 </section>
                 <div class="ws-focus-strip">
                   <span class="mono ws-muted">{{ introductionFocus.heading }}</span>
