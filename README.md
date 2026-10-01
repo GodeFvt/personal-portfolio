@@ -24,7 +24,7 @@ npm run typecheck
 npm run build
 ```
 
-Open http://localhost:3000. Node 22.12+ is required. Start production with `node .output/server/index.mjs` and set `PORT` if needed. Use a Node/Nitro-capable host for the API.
+Open http://localhost:3000. Node 22.12+ is required. Development and production use separate `Dockerfile.dev` and `Dockerfile.prod` images. The production Compose stack contains only the app and Nginx; it connects to the existing external PostgreSQL service and terminates HTTPS with certificates mounted read-only.
 
 Run `npm run test:phase5` for the isolated PostgreSQL, HTTP security, backup/restore, and production-image gate. Deployment handoff is documented in `docs/phase-5-deployment.md`, with separate Vercel and Ubuntu guides.
 

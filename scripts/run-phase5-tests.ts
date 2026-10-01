@@ -1,13 +1,15 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawn, spawnSync, type SpawnSyncOptions } from "node:child_process";
 
 const container = `portfolio-phase5-${process.pid}`;
 const image = `portfolio-phase5:${process.pid}`;
 const appContainer = `${container}-app`;
+const proxyContainer = `${container}-nginx`;
 const network = `${container}-network`;
 const mediaDirectory = await mkdtemp(join(tmpdir(), "portfolio-phase5-media-"));
+const certificateDirectory = await mkdtemp(join(tmpdir(), "portfolio-phase5-certs-"));
 const sessionSecret = "phase-five-session-secret-at-least-32-characters";
 const uploadSecret = "phase-five-upload-secret-at-least-32-characters";
 const ownerEmail = "owner@phase5.test";
@@ -32,6 +34,17 @@ async function waitFor(url: string, timeoutMs = 60_000) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(`Timed out waiting for ${url}`);
+}
+
+async function waitForTls(port: string, timeoutMs = 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  const command = process.platform === "win32" ? "curl.exe" : "curl";
+  while (Date.now() < deadline) {
+    const result = spawnSync(command, ["--insecure", "--fail", "--silent", `https://127.0.0.1:${port}/api/site`], { stdio: "ignore" });
+    if (result.status === 0) return;
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
+  }
+  throw new Error("Timed out waiting for the Nginx TLS proxy.");
 }
 
 try {
@@ -89,20 +102,31 @@ try {
   const restored = Number(output("docker", ["exec", container, "psql", "-U", "portfolio", "-d", "portfolio_restore", "-tAc", "SELECT COUNT(*) FROM \"PortfolioTab\""]));
   if (restored < 5) throw new Error("Backup restore verification did not recover the seeded portfolio.");
 
-  run("docker", ["build", "--target", "production", "--tag", image, "."]);
-  run("docker", ["run", "--detach", "--name", appContainer, "--network", network, "-p", "127.0.0.1::3000",
+  run("docker", ["build", "--file", "Dockerfile.prod", "--tag", image, "."]);
+  run("docker", ["run", "--detach", "--name", appContainer, "--network", network, "--network-alias", "app", "-p", "127.0.0.1::3000",
     "-e", "DATABASE_URL=postgresql://portfolio:portfolio@" + container + ":5432/portfolio",
     "-e", "NUXT_SESSION_PASSWORD=" + sessionSecret,
-    "-e", "NUXT_PUBLIC_SITE_URL=http://127.0.0.1:3000",
+    "-e", "NUXT_PUBLIC_SITE_URL=https://localhost",
     "-e", "STORAGE_PROVIDER=local", "-e", "LOCAL_STORAGE_DIR=/app/data/media", image]);
   const appPort = output("docker", ["port", appContainer, "3000/tcp"]).match(/:(\d+)$/)?.[1];
   if (!appPort) throw new Error("Could not resolve the production image port.");
   await waitFor(`http://127.0.0.1:${appPort}/api/site`, 90_000);
-  console.log("Phase 5 integration, backup/restore, and production image smoke tests passed.");
+  const certificateTarget = join(certificateDirectory, "live", "localhost");
+  await mkdir(certificateTarget, { recursive: true });
+  run("docker", ["run", "--rm", "--mount", `type=bind,source=${certificateTarget},target=/certs`, "alpine/openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048", "-days", "1", "-subj", "/CN=localhost", "-keyout", "/certs/privkey.pem", "-out", "/certs/fullchain.pem"]);
+  run("docker", ["run", "--detach", "--name", proxyContainer, "--network", network, "-p", "127.0.0.1::443",
+    "-e", "SITE_DOMAIN=localhost", "-e", "NGINX_ENVSUBST_FILTER=SITE_DOMAIN",
+    "--mount", `type=bind,source=${resolve("ops/nginx/default.conf.template")},target=/etc/nginx/templates/default.conf.template,readonly`,
+    "--mount", `type=bind,source=${certificateDirectory},target=/etc/nginx/certs,readonly`, "nginx:1.29-alpine"]);
+  const tlsPort = output("docker", ["port", proxyContainer, "443/tcp"]).match(/:(\d+)$/)?.[1];
+  if (!tlsPort) throw new Error("Could not resolve the Nginx TLS port.");
+  await waitForTls(tlsPort, 90_000);
+  console.log("Phase 5 integration, backup/restore, production image, and Nginx TLS smoke tests passed.");
 } finally {
   appProcess?.kill();
-  spawnSync("docker", ["rm", "-f", appContainer, container], { stdio: "ignore", shell: process.platform === "win32" });
+  spawnSync("docker", ["rm", "-f", proxyContainer, appContainer, container], { stdio: "ignore", shell: process.platform === "win32" });
   spawnSync("docker", ["network", "rm", network], { stdio: "ignore", shell: process.platform === "win32" });
   spawnSync("docker", ["image", "rm", "-f", image], { stdio: "ignore", shell: process.platform === "win32" });
   await rm(mediaDirectory, { recursive: true, force: true });
+  await rm(certificateDirectory, { recursive: true, force: true });
 }

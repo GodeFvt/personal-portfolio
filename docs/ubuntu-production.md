@@ -1,14 +1,15 @@
 # Ubuntu production guide
 
-This path is an alternative to Vercel. It runs the same Nitro server as a non-root user behind Caddy with automatic HTTPS.
+This path is an alternative to Vercel. It runs the same Nitro server as a non-root user behind Nginx. PostgreSQL is always external to the production Compose stack.
 
 ## Initial setup
 
-1. Install Docker Engine with the Compose plugin on a maintained Ubuntu LTS host. Allow inbound TCP 80/443 and UDP 443; do not expose PostgreSQL.
+1. Install Docker Engine with the Compose plugin, Nginx-compatible TLS certificates, and a maintained Ubuntu LTS host. Allow inbound TCP 80/443; do not expose PostgreSQL.
 2. Point the chosen DNS name to the host.
 3. Copy `ops/production.env.example` to `.env.production`, replace every placeholder, set `NUXT_PUBLIC_SITE_URL` to the final HTTPS origin, then restrict the file to the operator account.
-4. Prefer managed PostgreSQL. To use the bundled persistent PostgreSQL service, set `DATABASE_URL`/`DIRECT_URL` to `postgresql://...@db:5432/portfolio` and include `--profile local-db` on Compose commands.
-5. Use `STORAGE_PROVIDER=local` only with the `portfolio_media` volume and off-host backups. Vercel Blob can be used instead by setting its server-only credentials.
+4. Set `DATABASE_URL` and `DIRECT_URL` to the existing managed PostgreSQL service. `compose.prod.yml` intentionally does not create, expose, migrate, or back up a database container.
+5. Obtain the initial certificate while ports 80/443 are free, for example `sudo certbot certonly --standalone -d portfolio.example.com`, then set `NGINX_CERTS_DIR=/etc/letsencrypt`. Nginx mounts this directory read-only.
+6. Use `STORAGE_PROVIDER=local` only with the `portfolio_media` volume and off-host backups. Vercel Blob can be used instead by setting its server-only credentials.
 
 ## Release procedure
 
@@ -34,7 +35,14 @@ docker compose --env-file .env.production -f compose.prod.yml ps
 curl --fail https://your-domain.example/api/site
 ```
 
-Compose waits for the app health check before starting Caddy. Containers restart unless stopped, the app handles termination through the Node process, and Caddy emits JSON access logs. Application errors go to container stdout/stderr without environment values.
+Compose waits for the app health check before starting Nginx. Nginx redirects HTTP to HTTPS, terminates TLS, forwards the canonical scheme/IP/host headers, supports upgrades, limits uploads to 11 MB, and exposes `/nginx-health`. Containers restart unless stopped and logs remain on stdout/stderr without environment values.
+
+Renew certificates on the host with Certbot, then reload the proxy without restarting the app:
+
+```sh
+sudo certbot renew
+docker compose --env-file .env.production -f compose.prod.yml exec nginx nginx -s reload
+```
 
 ## Backup and restore
 
