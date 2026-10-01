@@ -28,6 +28,10 @@ Open http://localhost:3000. Node 22.12+ is required. Start production with `node
 
 Before using `/admin`, run `npm run auth:setup-local-env`, `npm run db:seed`, then set temporary `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables and run `npm run admin:bootstrap`. The bootstrap refuses to run once an active Owner exists. See `docs/phase-3-auth-admin.md` for the implemented security boundary and remaining Phase 3 scope.
 
+OAuth callback URLs use `/api/auth/oauth/{provider}/callback` on the configured `NUXT_PUBLIC_SITE_URL` (for example `/api/auth/oauth/google/callback`). Save credentials as a draft in Admin → Login methods, complete the live test, and activate only the tested version. Login providers stay disabled until that sequence succeeds.
+
+New administrators onboard without a password: create a single-use invitation in Admin → Users, then the recipient accepts it with an activated Google, Microsoft, or GitHub account whose verified email exactly matches the invitation. Every active administrator can add recovery identities from Account → My login methods.
+
 ## Structure
 
 - `app/pages/index.vue`: workspace views and interactions

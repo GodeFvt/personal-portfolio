@@ -62,6 +62,7 @@ enum MediaStatus {
 
 enum OAuthAttemptIntent {
   LOGIN
+  INVITE
   LINK
   TEST
   REAUTH
@@ -214,29 +215,33 @@ model OAuthAttempt {
   configVersion       Int
   initiatingUserId    String?            @db.Uuid
   initiatingSessionId String?            @db.Uuid
+  invitationId        String?            @db.Uuid
   expiresAt           DateTime
   consumedAt          DateTime?
   createdAt           DateTime           @default(now())
   provider            OAuthProvider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
   initiatingUser      AdminUser?         @relation(fields: [initiatingUserId], references: [id], onDelete: Cascade)
   initiatingSession   AdminSession?      @relation(fields: [initiatingSessionId], references: [id], onDelete: Cascade)
+  invitation          UserInvitation?    @relation(fields: [invitationId], references: [id], onDelete: Cascade)
 
   @@index([providerId, expiresAt])
   @@index([initiatingUserId])
   @@index([initiatingSessionId])
+  @@index([invitationId])
 }
 
 model UserInvitation {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String         @id @default(uuid()) @db.Uuid
   normalizedEmail String
   intendedRoles   Json
-  tokenHash       String    @unique
+  tokenHash       String         @unique
   expiresAt       DateTime
   acceptedAt      DateTime?
-  invitedById     String    @db.Uuid
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  invitedBy       AdminUser @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+  invitedById     String         @db.Uuid
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  invitedBy       AdminUser      @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+  oauthAttempts   OAuthAttempt[]
 
   @@index([normalizedEmail, expiresAt])
 }

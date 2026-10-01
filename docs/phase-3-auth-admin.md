@@ -4,7 +4,7 @@
 
 The public portfolio and admin now use the same brand rhythm, typography, semantic color tokens, and restrained pink accent. Both surfaces support System, Light, and Dark preferences through one shared theme control, with the choice persisted by Nuxt Color Mode. The admin information architecture is unchanged, but its hierarchy, page context, navigation, forms, and loading states are denser and easier to scan.
 
-This is a Phase 3 interface checkpoint only. It does not advance the remaining authentication, OAuth, or content-editor scope listed below.
+The interface refresh was a Phase 3 checkpoint; the security and OAuth capabilities below are separate server-enforced milestones.
 
 ## Admin loading experience
 
@@ -20,6 +20,9 @@ Admin routes render their working surface immediately and fetch page data lazily
 - Admin login, overview, navigation, Users, Roles, Login methods, and Audit surfaces.
 - Navigation group/custom-page draft revisions, authenticated private preview data, optimistic version checks, and transactional publish. Public APIs continue to read published records only.
 - OAuth provider draft secrets use AES-256-GCM with a versioned environment keyring. Read APIs expose only `secretConfigured`; no endpoint returns plaintext secrets.
+- Invite-only OAuth-first onboarding with single-use expiring links, exact verified-email matching, passwordless accounts, revocation, custom-role create/update/delete, permission-subset delegation guards, user suspension/role assignment, and serializable last-active-Owner protection.
+- Per-request Google, Microsoft, and GitHub authorization-code adapters with PKCE, state replay protection, OIDC nonce/signature/issuer/audience checks, tested-draft activation, explicit identity link/unlink, re-authentication, and provider session revocation.
+- Every active administrator has a self-service My login methods page, independent of provider-management permissions, while provider credentials remain restricted to authorized administrators.
 
 ## Verified
 
@@ -31,7 +34,5 @@ Admin routes render their working surface immediately and fetch page data lazily
 
 ## Remaining before Phase 3 is complete
 
-- Invitation acceptance, custom-role mutations/delegation guards, user suspension/role assignment, and last-owner concurrency tests.
-- Per-request Google/Microsoft/GitHub adapters, OAuthAttempt replay protection, live test/activate flows, identity linking/unlinking, and provider session revocation.
 - Profile, projects, experience, stack, settings, and full block editors with draft preview/publish.
-- Bootstrap the real Owner and run live browser tests. OAuth providers remain disabled until credentials are supplied and a real round-trip passes.
+- Complete live browser checks for each configured provider. A provider remains unavailable to invitations and login until credentials complete a real test → activate round-trip.
