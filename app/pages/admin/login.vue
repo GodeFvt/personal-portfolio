@@ -38,7 +38,6 @@ async function submit() {
     <section class="admin-login-panel" aria-labelledby="admin-login-title">
       <p class="admin-route-label"><span>POST</span> /admin/session</p>
       <h1 id="admin-login-title">Sign in to manage the portfolio.</h1>
-      <p class="admin-login-intro">Password access is available to invited administrators only.</p>
 
       <form class="admin-form" @submit.prevent="submit">
         <label>
