@@ -12,7 +12,7 @@ Phase 5 turns the portfolio into a reproducible release rather than adding a new
 - server authorization remains required when frontend guards are bypassed;
 - same-origin/CSRF checks, session logout/revocation, private media, and session/user-scoped upload tokens are enforced;
 - a custom-format PostgreSQL backup restores into a new database with the expected records;
-- the multi-stage production image builds, starts as the non-root runtime user, becomes healthy, and serves `/api/site`.
+- the dedicated production image builds, starts as the non-root runtime user, becomes healthy, and serves `/api/site` through Nginx/TLS.
 
 Focused suites cover delegation, protected Owner changes, serializable retry behavior, OAuth state replay/expiry, PKCE request construction, invitation email rules, encrypted secret rotation, MIME spoofing, size limits, storage traversal, and upload-token tampering/expiry.
 
@@ -27,6 +27,8 @@ Google and GitHub were live-tested in Phase 3 through the configured draft → t
 - Vercel environment and Git release process: `docs/vercel-release.md`
 - Ubuntu, HTTPS, health checks, backup and restore: `docs/ubuntu-production.md`
 - Production Compose template: `compose.prod.yml`
+- Development/production images: `Dockerfile.dev` and `Dockerfile.prod`
+- Nginx TLS proxy template: `ops/nginx/default.conf.template`
 - Secret-free environment template: `ops/production.env.example`
 
 Secrets are not written to logs, client data, images, or the repository. OAuth encryption keys must be backed up separately from the database; restoring only the database is insufficient for provider login recovery.

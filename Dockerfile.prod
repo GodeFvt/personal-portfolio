@@ -7,19 +7,12 @@ RUN apt-get update \
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
-FROM dependencies AS dev
-
-COPY . .
-RUN npm run postinstall
-EXPOSE 3000
-CMD ["npm", "run", "dev"]
-
 FROM dependencies AS build
 
 COPY . .
 RUN npm run postinstall && npm run build
 
-FROM node:24-bookworm-slim AS production
+FROM node:24-bookworm-slim AS runtime
 
 ENV NODE_ENV=production \
   HOST=0.0.0.0 \

@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      target: dev
+      dockerfile: Dockerfile.dev
     command: npm run dev
     ports:
       - "3000:3000"
