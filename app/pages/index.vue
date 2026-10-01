@@ -177,6 +177,13 @@ const introductionHero = computed(() => {
     secondaryAction: stringValue(secondaryAction.label),
   };
 });
+const introductionHeadingLines = computed(() => {
+  const heading = introductionHero.value.heading.trim();
+  if (heading === "A little human. A lot of backend.") {
+    return ["A little human.", "A lot of backend."];
+  }
+  return [heading];
+});
 const introductionOrigin = computed(() => {
   const props = blockProps("origin", "text");
   return {
@@ -950,7 +957,13 @@ onBeforeUnmount(() => {
                 <section class="ws-intro">
                   <div class="ws-intro-copy">
                     <p class="ws-kicker">{{ introductionHero.kicker }}</p>
-                    <h1>{{ introductionHero.heading }}</h1>
+                    <h1>
+                      <span
+                        v-for="line in introductionHeadingLines"
+                        :key="line"
+                        class="ws-intro-title-line"
+                      >{{ line }}</span>
+                    </h1>
                     <p class="ws-full-name">
                       {{ profile.name }} <span>/ {{ profile.role }}</span>
                     </p>
@@ -1303,9 +1316,12 @@ onBeforeUnmount(() => {
           ? "Making a real request…"
           : "Explore the person behind the endpoints.")
       }}</span
-      ><span
-        ><UIcon name="i-lucide-code-xml" />Nuxt + TypeScript
-        <span class="ws-status-pink">♥</span></span
+      ><span class="ws-statusbar-links"
+        ><NuxtLink class="ws-admin-link" to="/admin/login"
+          ><UIcon name="i-lucide-lock-keyhole" />Admin</NuxtLink
+        ><span class="ws-statusbar-divider" aria-hidden="true">/</span
+        ><span><UIcon name="i-lucide-code-xml" />Nuxt + TypeScript</span
+        ><span class="ws-status-pink">♥</span></span
       >
     </footer>
     <div v-if="copyNotice" class="ws-copy-toast" role="status">

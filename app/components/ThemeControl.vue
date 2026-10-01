@@ -2,7 +2,6 @@
 const colorMode = useColorMode();
 
 const modes = [
-  { value: "system", label: "System", icon: "i-lucide-monitor" },
   { value: "light", label: "Light", icon: "i-lucide-sun" },
   { value: "dark", label: "Dark", icon: "i-lucide-moon" },
 ] as const;
@@ -15,7 +14,7 @@ const modes = [
       :key="mode.value"
       type="button"
       :aria-label="`Use ${mode.label.toLowerCase()} theme`"
-      :aria-pressed="colorMode.preference === mode.value"
+      :aria-pressed="colorMode.value === mode.value"
       :title="mode.label"
       @click="colorMode.preference = mode.value"
     >

@@ -704,6 +704,10 @@
 .ws-intro h1 > span {
   color: #e89abb;
 }
+.ws-intro h1 > .ws-intro-title-line {
+  display: block;
+  color: inherit;
+}
 .ws-full-name {
   font-size: 11px;
   color: #e3e3e3;
@@ -1363,6 +1367,22 @@
 }
 .ws-statusbar .iconify {
   font-size: 12px;
+}
+.ws-statusbar-links,
+.ws-statusbar-links > span,
+.ws-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ws-admin-link {
+  color: inherit;
+}
+.ws-admin-link:hover {
+  color: var(--ws-pink);
+}
+.ws-statusbar-divider {
+  color: #555;
 }
 .ws-status-pink {
   color: #e89abb;
@@ -2510,6 +2530,5 @@ html.light .ws-app .graph-node[aria-pressed="true"] { border-color: var(--ws-pin
 html.light .ws-app .graph-note { color: #656560; }
 
 @media (max-width: 900px) {
-  .ws-topbar .theme-control > button span { display: none; }
-  .ws-topbar .theme-control > button { min-width: 30px; padding-inline: 7px; }
+  .ws-topbar .theme-control > button { min-width: 42px; padding-inline: 7px; }
 }

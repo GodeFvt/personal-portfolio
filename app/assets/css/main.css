@@ -75,7 +75,7 @@ button:active {
 
 .theme-control {
   display: inline-grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   align-items: center;
   padding: 3px;
   border: 1px solid var(--line);
@@ -100,8 +100,8 @@ button:active {
 .theme-control .iconify { width: 13px; height: 13px; }
 
 @media (max-width: 700px) {
-  .theme-control > button { min-width: 30px; padding: 0 7px; }
-  .theme-control > button span { display: none; }
+  .theme-control > button { min-width: 42px; padding: 0 7px; gap: 4px; }
+  .theme-control .iconify { display: none; }
 }
 
 .project-visual {
