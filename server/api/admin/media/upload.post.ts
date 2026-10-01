@@ -2,7 +2,7 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { MediaProvider, MediaStatus, MediaVisibility } from "~~/generated/prisma/client";
 import { mediaSizeLimit, startMediaUploadSchema } from "~~/shared/schemas/media";
 import { issueMediaUploadToken, safeOriginalName, verifyAndCompleteMedia, verifyMediaUploadToken } from "../../../services/media";
-import { configuredMediaProvider } from "../../../storage";
+import { mediaStorage, resolveUploadProvider, type UploadProviderKey } from "../../../storage";
 import { apiData, apiError } from "../../../utils/api-response";
 import { requireCsrf, requirePermission, writeAuditLog } from "../../../utils/admin-auth";
 import { useDatabase } from "../../../utils/db";
@@ -26,9 +26,6 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
   if (body && typeof body === "object" && typeof body.type === "string" && body.type.startsWith("blob.")) {
-    if (configuredMediaProvider() !== MediaProvider.VERCEL_BLOB) {
-      return apiError(event, 409, { code: "STORAGE_PROVIDER_MISMATCH", message: "Direct Blob upload is not enabled." });
-    }
     try {
       const env = getServerEnv();
       return await handleUpload({
@@ -78,7 +75,12 @@ export default defineEventHandler(async (event) => {
   }
   const parsed = startMediaUploadSchema.safeParse(body);
   if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "Please check the selected file." });
-  const provider = configuredMediaProvider();
+  let provider: MediaProvider;
+  try {
+    provider = resolveUploadProvider(parsed.data.provider as UploadProviderKey | undefined);
+  } catch (error) {
+    return apiError(event, 409, { code: "STORAGE_PROVIDER_UNAVAILABLE", message: error instanceof Error ? error.message : "The selected storage provider is unavailable." });
+  }
   const originalName = safeOriginalName(parsed.data.originalName);
   if (!originalName) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "File name is required." });
   const storageKey = `uploads/${parsed.data.id}/${originalName}`;
@@ -97,13 +99,26 @@ export default defineEventHandler(async (event) => {
       },
     });
     const uploadToken = issueMediaUploadToken({ assetId: asset.id, sessionId: admin.session.id, userId: admin.user.id });
+    const storage = mediaStorage(provider);
+    const uploadUrl = provider === MediaProvider.VERCEL_BLOB
+      ? undefined
+      : storage.createUploadUrl
+        ? await storage.createUploadUrl(storageKey, asset.mimeType, 10 * 60)
+        : `/api/admin/media/${asset.id}/content`;
     await writeAuditLog({ actorId: admin.user.id, action: "media.upload.reserve", entityType: "MediaAsset", entityId: asset.id, metadata: { provider, mimeType: asset.mimeType, size: asset.size.toString() } });
     return apiData({
       id: asset.id,
-      provider: provider === MediaProvider.VERCEL_BLOB ? "vercel-blob" : "local",
+      provider: provider === MediaProvider.VERCEL_BLOB
+        ? "vercel-blob"
+        : provider === MediaProvider.CLOUDFLARE_R2
+          ? "cloudflare-r2"
+          : provider === MediaProvider.MINIO
+            ? "minio"
+            : "local",
       storageKey,
       uploadToken,
-      uploadUrl: provider === MediaProvider.LOCAL ? `/api/admin/media/${asset.id}/content` : undefined,
+      uploadUrl,
+      directUpload: Boolean(storage.createUploadUrl),
       handleUploadUrl: provider === MediaProvider.VERCEL_BLOB ? "/api/admin/media/upload" : undefined,
     });
   } catch (error) {

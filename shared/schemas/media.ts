@@ -9,6 +9,12 @@ export const allowedMediaMimeTypes = [
 
 export const mediaMimeTypeSchema = z.enum(allowedMediaMimeTypes);
 
+export const uploadMediaProviderSchema = z.enum([
+  "vercel-blob",
+  "cloudflare-r2",
+  "minio",
+]);
+
 export function mediaSizeLimit(mimeType: string) {
   return mimeType === "application/pdf" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
 }
@@ -19,6 +25,7 @@ export const startMediaUploadSchema = z.object({
   mimeType: mediaMimeTypeSchema,
   size: z.number().int().positive().max(10 * 1024 * 1024),
   alt: z.string().trim().min(1).max(300),
+  provider: uploadMediaProviderSchema.optional(),
 }).superRefine((value, context) => {
   if (value.size > mediaSizeLimit(value.mimeType)) {
     context.addIssue({ code: "custom", path: ["size"], message: "The selected file is too large." });

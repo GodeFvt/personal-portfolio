@@ -2,7 +2,9 @@
 
 ## Implemented workflow
 
-- One storage interface provides `upload`, `read`, `readBuffer`, `stat`, and `delete` operations for local disk and private Vercel Blob.
+- One storage interface provides `upload`, `read`, `readBuffer`, `stat`, and `delete` operations for local disk, private Vercel Blob, Cloudflare R2, and MinIO.
+- New uploads can choose Vercel Blob, Cloudflare R2, or local-development MinIO in the Media library and reusable media picker. Local disk remains readable for legacy assets.
+- R2 and MinIO issue short-lived presigned PUT URLs so browser uploads do not pass through the Vercel request-body limit; completion still downloads and verifies the exact stored object before publishing it.
 - Local objects live outside `public/`, use generated UUID paths, and reject any path that escapes the configured storage directory.
 - Vercel uploads use short-lived client-upload tokens. The token-generation request rechecks the current admin session, `media.write`, Origin/CSRF, the pending reservation, pathname, MIME type, and size. The completion callback carries a separately signed reservation grant.
 - Upload reservations begin as `PENDING` and `PRIVATE`. Completion reads the stored object, checks its real signature, declared MIME type, exact size, and image dimensions, then moves it to `READY`. Failed verification deletes the stored object and records `FAILED`.
@@ -20,7 +22,7 @@
 
 ## Environment
 
-`STORAGE_PROVIDER=local` uses `LOCAL_STORAGE_DIR`. `STORAGE_PROVIDER=vercel-blob` uses Vercel project OIDC or `BLOB_READ_WRITE_TOKEN`; `BLOB_STORE_ID` identifies the private store when required. Upload grants use `MEDIA_UPLOAD_SECRET`, falling back to `NUXT_SESSION_PASSWORD`. Every environment must use independent secrets and storage.
+`STORAGE_PROVIDER` remains the fallback for API clients that omit a provider. Vercel Blob uses project OIDC or `BLOB_READ_WRITE_TOKEN`. Cloudflare R2 uses `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY`. MinIO uses `MINIO_ENDPOINT`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`, and is intentionally unavailable on Vercel. Upload grants use `MEDIA_UPLOAD_SECRET`, falling back to `NUXT_SESSION_PASSWORD`. Every environment must use independent secrets and storage.
 
 ## Verification performed
 

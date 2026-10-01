@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   if (!verifyMediaUploadToken(uploadToken, { assetId: id, sessionId: admin.session.id, userId: admin.user.id })) {
     return apiError(event, 403, { code: "UPLOAD_TOKEN_INVALID", message: "Upload token is invalid or expired." });
   }
-  const asset = await useDatabase().mediaAsset.findFirst({ where: { id, provider: MediaProvider.LOCAL, status: MediaStatus.PENDING } });
+  const asset = await useDatabase().mediaAsset.findFirst({ where: { id, provider: { in: [MediaProvider.LOCAL, MediaProvider.CLOUDFLARE_R2, MediaProvider.MINIO] }, status: MediaStatus.PENDING } });
   if (!asset) return apiError(event, 404, { code: "NOT_FOUND", message: "Upload reservation was not found." });
   const limit = mediaSizeLimit(asset.mimeType);
   const contentLength = Number(getHeader(event, "content-length") ?? 0);

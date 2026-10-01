@@ -18,6 +18,8 @@ try {
           ? "Vercel OIDC"
           : "BLOB_READ_WRITE_TOKEN"
         : "not required",
+    r2: env.R2_ACCOUNT_ID && env.R2_BUCKET && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY ? "configured" : "not configured",
+    minio: !process.env.VERCEL && env.MINIO_ENDPOINT && env.MINIO_BUCKET && env.MINIO_ACCESS_KEY && env.MINIO_SECRET_KEY ? "configured (local only)" : "not configured",
   });
 } catch (error) {
   if (error instanceof ZodError) {

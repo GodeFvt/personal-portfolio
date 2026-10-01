@@ -46,6 +46,8 @@ enum PageBlockType {
 enum MediaProvider {
   LOCAL
   VERCEL_BLOB
+  CLOUDFLARE_R2
+  MINIO
 }
 
 enum MediaVisibility {

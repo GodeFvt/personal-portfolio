@@ -24,9 +24,18 @@ const { adminSession } = useAdminSession();
 const { data, refresh } = await useLazyFetch<MediaResponse>(`/api/admin/media?status=READY&kind=${props.kind}`, { key: `media-picker-${props.kind}` });
 const fileInput = ref<HTMLInputElement>();
 const alt = ref("");
+const provider = ref<MediaUploadProvider>("vercel-blob");
 const uploading = ref(false);
 const uploadError = ref("");
 const selected = computed(() => data.value?.data.items.find((item) => item.id === props.modelValue));
+const { data: providerData } = await useLazyFetch<{ data: { providers: MediaUploadProviderOption[] } }>("/api/admin/media/providers", { key: "media-upload-providers" });
+const uploadProviders = computed(() => providerData.value?.data.providers ?? []);
+watchEffect(() => {
+  if (!uploadProviders.value.some((item) => item.key === provider.value && item.enabled)) {
+    const first = uploadProviders.value.find((item) => item.enabled);
+    if (first) provider.value = first.key;
+  }
+});
 
 function choose(item: MediaItem) {
   emit("update:modelValue", item.id);
@@ -39,7 +48,7 @@ async function uploadSelected() {
   uploading.value = true;
   uploadError.value = "";
   try {
-    const result = await uploadAdminMedia(file, alt.value.trim(), adminSession.value.csrfToken);
+    const result = await uploadAdminMedia(file, alt.value.trim(), adminSession.value.csrfToken, provider.value);
     await refresh();
     const item = data.value?.data.items.find((entry) => entry.id === result.data.id);
     if (item) choose(item);
@@ -76,8 +85,9 @@ async function uploadSelected() {
       <summary>{{ modelValue ? 'Upload replacement' : 'Upload new file' }}</summary>
       <label class="admin-field"><span>File</span><input ref="fileInput" type="file" :accept="kind === 'image' ? 'image/jpeg,image/png,image/webp' : 'application/pdf'" /></label>
       <label class="admin-field"><span>Alternative text</span><input v-model="alt" maxlength="300" /></label>
+      <label class="admin-field"><span>Store in</span><select v-model="provider"><option v-for="option in uploadProviders" :key="option.key" :value="option.key" :disabled="!option.enabled">{{ option.label }}{{ option.enabled ? '' : ' — not configured' }}</option></select></label>
       <p v-if="uploadError" class="admin-form-error" role="alert">{{ uploadError }}</p>
-      <button class="admin-secondary-button" type="button" :disabled="uploading || !alt.trim()" @click="uploadSelected">{{ uploading ? 'Verifying…' : 'Upload and select' }}</button>
+      <button class="admin-secondary-button" type="button" :disabled="uploading || !alt.trim() || !uploadProviders.some((item) => item.key === provider && item.enabled)" @click="uploadSelected">{{ uploading ? 'Verifying…' : 'Upload and select' }}</button>
     </details>
   </div>
 </template>
