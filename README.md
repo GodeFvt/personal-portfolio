@@ -2,7 +2,7 @@
 
 A Nuxt 4 portfolio styled as an API workspace. Neutral black surfaces, restrained pink accents, and natural-color profile photos.
 
-Current release: `v1.3.2` (the public portfolio and admin share one visual system with System, Light, and Dark themes; authenticated users bypass the login screen; Vercel Functions run in Singapore near the primary audience and database). Compatible performance and maintenance updates increment the `v1.x.x` line. `v2.0.0` is reserved for completion of the full backend/admin plan.
+Current release: `v1.7.0` (the public portfolio, dynamic backend, secured admin, media workflow, and deployment handoff share one production system). Further compatible changes stay on the `v1.x` line; `v2.0.0` is reserved until the owner explicitly calls for it.
 
 ## Run
 
@@ -25,6 +25,8 @@ npm run build
 ```
 
 Open http://localhost:3000. Node 22.12+ is required. Start production with `node .output/server/index.mjs` and set `PORT` if needed. Use a Node/Nitro-capable host for the API.
+
+Run `npm run test:phase5` for the isolated PostgreSQL, HTTP security, backup/restore, and production-image gate. Deployment handoff is documented in `docs/phase-5-deployment.md`, with separate Vercel and Ubuntu guides.
 
 Before using `/admin`, run `npm run auth:setup-local-env`, `npm run db:seed`, then set temporary `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables and run `npm run admin:bootstrap`. The bootstrap refuses to run once an active Owner exists. See `docs/phase-3-auth-admin.md` for the completed Phase 3 security, OAuth, content-editor, and publish boundary.
 

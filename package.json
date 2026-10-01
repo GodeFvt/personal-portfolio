@@ -12,6 +12,8 @@
     "test:oauth": "tsx --test tests/oauth-security.test.ts",
     "test:content": "tsx --test tests/admin-content.test.ts",
     "test:media": "tsx --test tests/media-security.test.ts",
+    "test:security": "tsx --test tests/security-hardening.test.ts",
+    "test:phase5": "tsx scripts/run-phase5-tests.ts",
     "env:check": "tsx scripts/check-env.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -40,7 +42,8 @@
     "zod": "4.6.5"
   },
   "overrides": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "mysql2": "^3.24.5"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.0",
@@ -50,5 +53,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.6.0"
+  "version": "1.7.0"
 }
