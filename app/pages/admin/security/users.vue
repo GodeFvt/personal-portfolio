@@ -9,6 +9,7 @@ interface UsersResponse { data: { items: AdminUser[]; invitations: Invitation[] 
 interface RolesResponse { data: { roles: Array<Role & { isProtected: boolean; version: number }> } }
 
 const { adminSession } = useAdminSession();
+const requestConfirmation = useAdminConfirm();
 const { data, error, refresh } = await useLazyFetch<UsersResponse>("/api/admin/security/users", { query: { perPage: 50 } });
 const { data: roleData } = await useLazyFetch<RolesResponse>("/api/admin/security/roles");
 const inviteOpen = ref(false);
@@ -71,7 +72,7 @@ async function saveUser() {
 }
 
 async function revokeInvitation(id: string) {
-  if (busy.value || !confirm("Revoke this invitation?")) return;
+  if (busy.value || !await requestConfirmation({ title: "Revoke this invitation?", description: "The invitation link will stop working immediately.", confirmLabel: "Revoke invitation", tone: "danger" })) return;
   busy.value = true; errorMessage.value = "";
   try {
     await $fetch(`/api/admin/security/invitations/${id}`, { method: "DELETE", headers: { "x-csrf-token": adminSession.value?.csrfToken ?? "" } });

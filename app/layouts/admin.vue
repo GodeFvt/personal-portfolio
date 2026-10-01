@@ -3,6 +3,7 @@ const route = useRoute();
 const { adminSession, clear } = useAdminSession();
 const mobileOpen = ref(false);
 const loggingOut = ref(false);
+const confirmDialog = provideAdminConfirm();
 
 const navigation = [
   { label: "Overview", to: "/admin", icon: "i-lucide-layout-dashboard" },
@@ -113,5 +114,6 @@ watch(() => route.fullPath, () => {
     <main class="admin-main">
       <slot />
     </main>
+    <AdminConfirmModal v-bind="confirmDialog.state.value" @confirm="confirmDialog.confirm" @cancel="confirmDialog.cancel" />
   </div>
 </template>
