@@ -16,11 +16,15 @@ const securityNavigation = [
   { label: "Audit", to: "/admin/security/audit", permission: "audit.read" },
 ];
 
+const accountNavigation = [
+  { label: "My login methods", to: "/admin/account/login-methods", icon: "i-lucide-key-round" },
+];
+
 const visibleSecurityNavigation = computed(() =>
   securityNavigation.filter((item) => adminSession.value?.user.permissions.includes(item.permission)),
 );
 
-const allNavigation = [...navigation, ...securityNavigation];
+const allNavigation = [...navigation, ...accountNavigation, ...securityNavigation];
 const currentPage = computed(() => allNavigation.find((item) => item.to === route.path)?.label ?? "Admin");
 
 async function logout() {
@@ -75,6 +79,11 @@ watch(() => route.fullPath, () => {
       <nav class="admin-navigation" aria-label="Admin navigation">
         <p class="admin-nav-label">Content</p>
         <NuxtLink v-for="item in navigation" :key="item.to" :to="item.to" class="admin-nav-link" :class="{ 'is-active': route.path === item.to }">
+          <UIcon :name="item.icon" /><span>{{ item.label }}</span><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
+        </NuxtLink>
+
+        <p class="admin-nav-label">Account</p>
+        <NuxtLink v-for="item in accountNavigation" :key="item.to" :to="item.to" class="admin-nav-link" :class="{ 'is-active': route.path === item.to }">
           <UIcon :name="item.icon" /><span>{{ item.label }}</span><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
         </NuxtLink>
 
