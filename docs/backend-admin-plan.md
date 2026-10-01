@@ -502,19 +502,19 @@ Deploy checklist เพิ่มการลงทะเบียน callback �
 
 ### Phase 5 — Deployment และส่งมอบ
 
-- [ ] Docker production + Ubuntu HTTPS/backup/restore guide และ Vercel environment/release guide
-- [ ] ทดสอบ migration/import กับฐานข้อมูลว่างก่อน production
-- [ ] Typecheck/build และ integration tests กับ PostgreSQL จริง: pagination, visibility, publish atomicity, version conflict
-- [ ] Auth tests: bypass frontend guard ไม่ได้, CSRF ถูกปฏิเสธ, logout/revocation มีผล, upload token ต้องมีสิทธิ์
-- [ ] RBAC tests ครบ role × API รวม direct requests, การแก้ own role, assign permissions เกินตัวเอง, จัดการ Owner, role edits ที่กระทบผู้ใช้อื่น และ concurrent last-owner changes
-- [ ] OAuth integration tests: success/cancel/denied consent, state replay/expiry, wrong intent, OIDC nonce/issuer/audience/tenant mismatch และ PKCE ตาม adapter
-- [ ] Account tests: email ตรงกันไม่ auto-link, unverified/missing email ไม่ได้สิทธิ์, invitation หมดอายุ/ใช้ซ้ำ, identity ผูกคนอื่นแล้ว, unlink วิธีสุดท้าย และ suspended user
-- [ ] Provider tests: test ไม่สร้าง session ใหม่, draft secret ไม่กระทบ active config, config เปลี่ยนต้อง retest, disable ปฏิเสธ callback ที่ค้าง และ sessions เดิมถูก revoke
-- [ ] Secret tests: API/logs/client bundle ไม่มี plaintext secret, encryption key rotation อ่านข้อมูลเก่าได้ และ restore DB พร้อม keys แล้ว login ทำงาน
-- [ ] ทดสอบ provider จริงทั้ง Google/Microsoft/GitHub เมื่อมี test credentials; mock tests อย่างเดียวไม่ถือว่าผ่าน live OAuth integration และต้องรายงานรายการที่ยังไม่ได้ทดสอบจริง
-- [ ] Browser tests: auto-fetch, refresh, slow-response race, dynamic navigation, draft/publish และ desktop/mobile
-- [ ] ตรวจ private media, rejected upload, DB outage, upload callback ซ้ำ และ storage failure ไม่ทำให้เกิด broken published reference
-- [ ] Smoke test Vercel preview และ Docker production image; ลอง backup/restore DB+media ก่อนระบุว่าพร้อมใช้งาน
+- [x] Docker production + Ubuntu HTTPS/backup/restore guide และ Vercel environment/release guide
+- [x] ทดสอบ migration/import กับฐานข้อมูลว่างก่อน production
+- [x] Typecheck/build และ integration tests กับ PostgreSQL จริง: pagination, visibility, publish atomicity, version conflict
+- [x] Auth tests: bypass frontend guard ไม่ได้, CSRF ถูกปฏิเสธ, logout/revocation มีผล, upload token ต้องมีสิทธิ์
+- [x] RBAC tests ครบ role × API รวม direct requests, การแก้ own role, assign permissions เกินตัวเอง, จัดการ Owner, role edits ที่กระทบผู้ใช้อื่น และ concurrent last-owner changes
+- [x] OAuth integration tests: success/cancel/denied consent, state replay/expiry, wrong intent, OIDC nonce/issuer/audience/tenant mismatch และ PKCE ตาม adapter
+- [x] Account tests: email ตรงกันไม่ auto-link, unverified/missing email ไม่ได้สิทธิ์, invitation หมดอายุ/ใช้ซ้ำ, identity ผูกคนอื่นแล้ว, unlink วิธีสุดท้าย และ suspended user
+- [x] Provider tests: test ไม่สร้าง session ใหม่, draft secret ไม่กระทบ active config, config เปลี่ยนต้อง retest, disable ปฏิเสธ callback ที่ค้าง และ sessions เดิมถูก revoke
+- [x] Secret tests: API/logs/client bundle ไม่มี plaintext secret, encryption key rotation อ่านข้อมูลเก่าได้ และ restore DB พร้อม keys แล้ว login ทำงาน
+- [x] ทดสอบ provider จริงเมื่อมี test credentials: Google/GitHub ผ่าน live flow; Microsoft ไม่มี credentials และคงปิดไว้ตาม gate โดยรายงานไว้ใน `docs/phase-5-deployment.md`
+- [x] Browser tests: auto-fetch, refresh, slow-response race, dynamic navigation, draft/publish และ desktop/mobile
+- [x] ตรวจ private media, rejected upload, DB outage, upload callback ซ้ำ และ storage failure ไม่ทำให้เกิด broken published reference
+- [x] Smoke test Vercel preview และ Docker production image; ลอง backup/restore DB+media ก่อนระบุว่าพร้อมใช้งาน
 
 ## 13. ขอบเขตและค่าที่ตั้งต้นไว้
 

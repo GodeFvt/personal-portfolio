@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "~~/generated/prisma/client";
+import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 import {
   experienceSnapshotSchema,
   navigationGroupSnapshotSchema,
@@ -7,7 +7,7 @@ import {
   projectSnapshotSchema,
   siteSettingsSnapshotSchema,
   skillGroupSnapshotSchema,
-} from "~~/shared/schemas/admin-content";
+} from "../../shared/schemas/admin-content";
 
 type Transaction = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 

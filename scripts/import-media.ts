@@ -9,6 +9,7 @@ import {
   MediaVisibility,
   PrismaClient,
 } from "../generated/prisma/client";
+import { createLocalStorage } from "../server/storage/local";
 
 const dryRun = process.argv.includes("--dry-run");
 const apply = process.argv.includes("--apply");
@@ -19,6 +20,7 @@ const prefix = prefixArgument >= 0 ? process.argv[prefixArgument + 1] : "preview
 if (!prefix || !/^[a-z0-9][a-z0-9/_-]*$/i.test(prefix)) {
   throw new Error("--prefix must contain only letters, numbers, slash, underscore, or dash.");
 }
+const storageProvider = process.env.STORAGE_PROVIDER === "vercel-blob" ? "vercel-blob" : "local";
 
 const root = resolve(import.meta.dirname, "..");
 const candidates = [
@@ -61,7 +63,7 @@ for (const candidate of candidates) {
     validSize,
     absolutePath,
     proposedStorageKey: `${prefix}/seed/${candidate.mediaId}/${basename(absolutePath)}`,
-    proposedProvider: apply ? "vercel-blob" : (process.env.STORAGE_PROVIDER ?? "local"),
+    proposedProvider: storageProvider,
     result: validSignature && validSize ? "ready-to-import" : "rejected",
   });
 }
@@ -73,28 +75,35 @@ if (apply && !process.exitCode) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const connectionString =
     process.env.DIRECT_URL ?? process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? process.env.PRISMA_DATABASE_URL;
-  if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is required for local Blob import.");
+  if (storageProvider === "vercel-blob" && !token) throw new Error("BLOB_READ_WRITE_TOKEN is required for a Vercel Blob import.");
   if (!connectionString?.match(/^postgres(?:ql)?:\/\//)) {
     throw new Error("A direct PostgreSQL URL is required for media import.");
   }
 
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  const localStorage = createLocalStorage(process.env.LOCAL_STORAGE_DIR ?? ".data/media");
   try {
     for (const item of report) {
       const bytes = await readFile(item.absolutePath);
-      const blob = await put(item.proposedStorageKey, bytes, {
-        access: "private",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: item.expectedMime,
-        token,
-      });
+      const storageKey = storageProvider === "vercel-blob"
+        ? (await put(item.proposedStorageKey, bytes, {
+            access: "private",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            contentType: item.expectedMime,
+            token,
+          })).pathname
+        : item.proposedStorageKey;
+      if (storageProvider === "local") {
+        await localStorage.delete(storageKey);
+        await localStorage.upload(storageKey, bytes, item.expectedMime);
+      }
 
       await prisma.mediaAsset.upsert({
         where: { id: item.mediaId },
         update: {
-          provider: MediaProvider.VERCEL_BLOB,
-          storageKey: blob.pathname,
+          provider: storageProvider === "vercel-blob" ? MediaProvider.VERCEL_BLOB : MediaProvider.LOCAL,
+          storageKey,
           originalName: item.originalName,
           mimeType: item.expectedMime,
           size: BigInt(item.bytes),
@@ -104,8 +113,8 @@ if (apply && !process.exitCode) {
         },
         create: {
           id: item.mediaId,
-          provider: MediaProvider.VERCEL_BLOB,
-          storageKey: blob.pathname,
+          provider: storageProvider === "vercel-blob" ? MediaProvider.VERCEL_BLOB : MediaProvider.LOCAL,
+          storageKey,
           originalName: item.originalName,
           mimeType: item.expectedMime,
           size: BigInt(item.bytes),
@@ -123,7 +132,7 @@ if (apply && !process.exitCode) {
         resumeMediaId: candidates[1].mediaId,
       },
     });
-    console.log(`Imported ${report.length} private Blob objects under ${prefix}/ and linked them to the profile.`);
+    console.log(`Imported ${report.length} ${storageProvider} objects under ${prefix}/ and linked them to the profile.`);
   } finally {
     await prisma.$disconnect();
   }
