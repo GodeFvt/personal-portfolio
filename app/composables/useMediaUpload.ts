@@ -3,36 +3,44 @@ import { upload } from "@vercel/blob/client";
 interface UploadReservation {
   data: {
     id: string;
-    provider: "local" | "vercel-blob";
+    provider: "local" | "vercel-blob" | "cloudflare-r2" | "minio";
     storageKey: string;
     uploadToken: string;
     uploadUrl?: string;
     handleUploadUrl?: string;
+    directUpload?: boolean;
   };
 }
 
-export async function uploadAdminMedia(file: File, alt: string, csrfToken: string) {
+export type MediaUploadProvider = "vercel-blob" | "cloudflare-r2" | "minio";
+
+export interface MediaUploadProviderOption {
+  key: MediaUploadProvider;
+  label: string;
+  enabled: boolean;
+}
+
+export async function uploadAdminMedia(file: File, alt: string, csrfToken: string, provider?: MediaUploadProvider) {
   const id = crypto.randomUUID();
   const reservation = await $fetch<UploadReservation>("/api/admin/media/upload", {
     method: "POST",
     headers: { "x-csrf-token": csrfToken },
-    body: { id, originalName: file.name, mimeType: file.type, size: file.size, alt },
+    body: { id, originalName: file.name, mimeType: file.type, size: file.size, alt, provider },
   });
   const details = reservation.data;
-  if (details.provider === "local") {
+  if (details.provider !== "vercel-blob") {
     const response = await fetch(details.uploadUrl!, {
-      method: "POST",
-      credentials: "same-origin",
+      method: details.directUpload ? "PUT" : "POST",
+      credentials: details.directUpload ? "omit" : "same-origin",
       headers: {
         "content-type": file.type,
-        "x-csrf-token": csrfToken,
-        "x-media-upload-token": details.uploadToken,
+        ...(!details.directUpload ? { "x-csrf-token": csrfToken, "x-media-upload-token": details.uploadToken } : {}),
       },
       body: file,
     });
     if (!response.ok) {
-      const result = await response.json().catch(() => null);
-      throw new Error(result?.error?.message ?? "The file could not be uploaded.");
+      const result = details.directUpload ? null : await response.json().catch(() => null);
+      throw new Error(result?.error?.message ?? "The file could not be uploaded to the selected storage provider.");
     }
   } else {
     await upload(details.storageKey, file, {

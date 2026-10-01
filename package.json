@@ -12,6 +12,7 @@
     "test:oauth": "tsx --test tests/oauth-security.test.ts",
     "test:content": "tsx --test tests/admin-content.test.ts",
     "test:media": "tsx --test tests/media-security.test.ts",
+    "test:minio": "tsx scripts/test-minio.ts",
     "test:security": "tsx --test tests/security-hardening.test.ts",
     "test:phase5": "tsx scripts/run-phase5-tests.ts",
     "env:check": "tsx scripts/check-env.ts",
@@ -28,6 +29,8 @@
   },
   "dependencies": {
     "@adonisjs/hash": "9.1.1",
+    "@aws-sdk/client-s3": "^3.1145.0",
+    "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@nuxt/ui": "^4.11.2",
     "@pinia/nuxt": "1.0.2",
     "@prisma/adapter-pg": "7.10.0",
@@ -53,5 +56,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.8.2"
+  "version": "1.9.0"
 }

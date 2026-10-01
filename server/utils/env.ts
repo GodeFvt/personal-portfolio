@@ -12,10 +12,19 @@ const serverEnvSchema = z
     POSTGRES_URL: optionalConnectionUrl,
     PRISMA_DATABASE_URL: optionalConnectionUrl,
     DIRECT_URL: optionalConnectionUrl,
-    STORAGE_PROVIDER: z.enum(["local", "vercel-blob"]).default("local"),
+    STORAGE_PROVIDER: z.enum(["local", "vercel-blob", "cloudflare-r2", "minio"]).default("local"),
     LOCAL_STORAGE_DIR: z.string().min(1).default(".data/media"),
     BLOB_STORE_ID: z.string().min(1).optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+    R2_ACCOUNT_ID: z.string().min(1).optional(),
+    R2_BUCKET: z.string().min(1).optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    MINIO_ENDPOINT: z.string().url().optional(),
+    MINIO_PUBLIC_ENDPOINT: z.string().url().optional(),
+    MINIO_BUCKET: z.string().min(1).optional(),
+    MINIO_ACCESS_KEY: z.string().min(1).optional(),
+    MINIO_SECRET_KEY: z.string().min(1).optional(),
     MEDIA_UPLOAD_SECRET: z.string().min(32).optional(),
     MEDIA_LINK_SECRET: z.string().min(32).optional(),
     SCHEDULED_JOB_SECRET: z.string().min(32).optional(),
@@ -40,6 +49,12 @@ const serverEnvSchema = z
         message:
           "Vercel Blob needs project OIDC on Vercel or BLOB_READ_WRITE_TOKEN outside Vercel.",
       });
+    }
+    if (env.STORAGE_PROVIDER === "cloudflare-r2" && ![env.R2_ACCOUNT_ID, env.R2_BUCKET, env.R2_ACCESS_KEY_ID, env.R2_SECRET_ACCESS_KEY].every(Boolean)) {
+      context.addIssue({ code: "custom", path: ["R2_BUCKET"], message: "Cloudflare R2 needs account, bucket, access key, and secret key configuration." });
+    }
+    if (env.STORAGE_PROVIDER === "minio" && ![env.MINIO_ENDPOINT, env.MINIO_BUCKET, env.MINIO_ACCESS_KEY, env.MINIO_SECRET_KEY].every(Boolean)) {
+      context.addIssue({ code: "custom", path: ["MINIO_BUCKET"], message: "MinIO needs endpoint, bucket, access key, and secret key configuration." });
     }
     if ((process.env.NODE_ENV === "production" || process.env.VERCEL) && !env.NUXT_SESSION_PASSWORD) {
       context.addIssue({

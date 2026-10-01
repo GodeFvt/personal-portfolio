@@ -14,6 +14,11 @@ services:
       DIRECT_URL: ${DIRECT_URL:-${POSTGRES_URL:-${PRISMA_DATABASE_URL}}}
       STORAGE_PROVIDER: vercel-blob
       LOCAL_STORAGE_DIR: /app/.data/media
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_BUCKET: ${MINIO_BUCKET:-portfolio-media}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-portfolio-local}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-portfolio-local-secret}
       NUXT_PUBLIC_SITE_URL: http://localhost:3000
       CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-false}
       # Do not make a local container impersonate a Vercel deployment.
@@ -42,6 +47,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  minio:
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-portfolio-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-portfolio-local-secret}
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
 volumes:
   postgres_data:
   local_media:
+  minio_data:

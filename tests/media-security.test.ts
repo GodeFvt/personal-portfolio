@@ -18,6 +18,14 @@ test("media upload schema enforces per-type size limits", () => {
   assert.equal(startMediaUploadSchema.safeParse({ ...base, mimeType: "image/svg+xml", size: 100 }).success, false);
 });
 
+test("media upload schema accepts the three selectable object storage providers", () => {
+  const base = { id: crypto.randomUUID(), originalName: "cover.png", alt: "Project cover", mimeType: "image/png", size: 128 };
+  for (const provider of ["vercel-blob", "cloudflare-r2", "minio"]) {
+    assert.equal(startMediaUploadSchema.safeParse({ ...base, provider }).success, true);
+  }
+  assert.equal(startMediaUploadSchema.safeParse({ ...base, provider: "local" }).success, false);
+});
+
 test("signature verification rejects MIME spoofing and reads PNG dimensions", () => {
   const png = Buffer.alloc(32);
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
