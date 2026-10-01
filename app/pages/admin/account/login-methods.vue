@@ -7,6 +7,7 @@ interface Identity { id: string; displayEmail: string | null; createdAt: string;
 interface Response { data: { passwordConfigured: boolean; providers: Provider[]; identities: Identity[] } }
 
 const { adminSession, clear } = useAdminSession();
+const requestConfirmation = useAdminConfirm();
 const { data, error, refresh } = await useLazyFetch<Response>("/api/admin/account/login-methods");
 const route = useRoute();
 const busy = ref(false);
@@ -45,7 +46,7 @@ async function startOAuth(provider: Provider, intent: "LINK" | "REAUTH") {
 }
 
 async function unlink(identity: Identity) {
-  if (busy.value || !confirm(`Unlink ${identity.provider.label}?`)) return;
+  if (busy.value || !await requestConfirmation({ title: `Unlink ${identity.provider.label}?`, description: "You may be signed out if this identity is connected to your current session.", confirmLabel: "Unlink identity", tone: "danger" })) return;
   busy.value = true; errorMessage.value = "";
   try {
     const response = await $fetch<{ data: { loggedOut: boolean } }>(`/api/admin/security/identities/${identity.id}`, {

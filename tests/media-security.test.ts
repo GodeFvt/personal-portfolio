@@ -5,6 +5,7 @@ import { inspectMedia, issueMediaUploadToken, verifyMediaUploadToken } from "../
 import { resolveLocalStoragePath } from "../server/storage/local";
 import { mediaSizeLimit, startMediaUploadSchema } from "../shared/schemas/media";
 import { resetServerEnvForTests } from "../server/utils/env";
+import { issuePrivateMediaLink, verifyPrivateMediaLink } from "../server/services/media-links";
 
 process.env.DATABASE_URL ||= "postgresql://portfolio:portfolio@localhost:5432/portfolio";
 process.env.NUXT_SESSION_PASSWORD = "test-only-session-secret-at-least-32-characters";
@@ -40,4 +41,14 @@ test("local storage paths cannot escape the configured directory", () => {
   assert.equal(resolveLocalStoragePath(base, "uploads/id/file.png"), resolve(base, "uploads/id/file.png"));
   assert.throws(() => resolveLocalStoragePath(base, "../outside.txt"), /Invalid media storage key/);
   assert.throws(() => resolveLocalStoragePath(base, ""), /Invalid media storage key/);
+});
+
+test("private media links are scoped to the asset and expire", () => {
+  const now = Date.now();
+  const assetId = crypto.randomUUID();
+  const grant = issuePrivateMediaLink(assetId, 900, now);
+  assert.equal(verifyPrivateMediaLink(assetId, grant.expiresAt, grant.signature, now), true);
+  assert.equal(verifyPrivateMediaLink(crypto.randomUUID(), grant.expiresAt, grant.signature, now), false);
+  assert.equal(verifyPrivateMediaLink(assetId, grant.expiresAt, `${grant.signature.slice(0, -1)}x`, now), false);
+  assert.equal(verifyPrivateMediaLink(assetId, grant.expiresAt, grant.signature, now + 901_000), false);
 });

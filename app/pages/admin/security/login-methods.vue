@@ -5,6 +5,7 @@ interface Provider { id: string; key: string; type: "google" | "microsoft" | "gi
 interface Identity { id: string; displayEmail: string | null; createdAt: string; provider: { id: string; key: string; label: string; enabled: boolean } }
 interface Response { data: { providers: Provider[]; currentIdentities: Identity[]; callbackBaseUrl: string } }
 const { adminSession, clear } = useAdminSession();
+const requestConfirmation = useAdminConfirm();
 const { data, error, refresh } = await useLazyFetch<Response>("/api/admin/security/providers");
 const route = useRoute();
 const editing = ref<Provider | null>(null);
@@ -50,13 +51,13 @@ async function activate(provider: Provider) {
   finally { busy.value = false; }
 }
 async function disable(provider: Provider) {
-  if (busy.value || !confirm(`Disable ${provider.label} and revoke its sessions?`)) return; busy.value = true; errorMessage.value = "";
+  if (busy.value || !await requestConfirmation({ title: `Disable ${provider.label}?`, description: "This login method will be disabled and all sessions created through it will be revoked.", confirmLabel: "Disable and revoke", tone: "danger" })) return; busy.value = true; errorMessage.value = "";
   try { await $fetch(`/api/admin/security/providers/${provider.id}/disable`, { method: "POST", headers: { "x-csrf-token": adminSession.value?.csrfToken ?? "" }, body: { expectedVersion: provider.version } }); message.value = `${provider.label} disabled and sessions revoked.`; await refresh(); }
   catch (error) { errorMessage.value = (error as { data?: { error?: { message?: string } } }).data?.error?.message ?? "Provider could not be disabled."; }
   finally { busy.value = false; }
 }
 async function unlink(identity: Identity) {
-  if (busy.value || !confirm(`Unlink ${identity.provider.label}?`)) return; busy.value = true; errorMessage.value = "";
+  if (busy.value || !await requestConfirmation({ title: `Unlink ${identity.provider.label}?`, description: "You may be signed out if this identity is connected to your current session.", confirmLabel: "Unlink identity", tone: "danger" })) return; busy.value = true; errorMessage.value = "";
   try { const response = await $fetch<{ data: { loggedOut: boolean } }>(`/api/admin/security/identities/${identity.id}`, { method: "DELETE", headers: { "x-csrf-token": adminSession.value?.csrfToken ?? "" } }); if (response.data.loggedOut) { clear(); await navigateTo("/admin/login"); return; } message.value = "Identity unlinked."; await refresh(); }
   catch (error) { errorMessage.value = (error as { data?: { error?: { message?: string } } }).data?.error?.message ?? "Identity could not be unlinked."; }
   finally { busy.value = false; }

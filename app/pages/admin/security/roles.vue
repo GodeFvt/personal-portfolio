@@ -4,6 +4,7 @@ useSeoMeta({ title: "Roles | Portfolio admin", robots: "noindex, nofollow" });
 interface Role { id: string; key: string; name: string; description: string | null; isSystem: boolean; isProtected: boolean; version: number; permissions: Array<{ permissionKey: string }>; _count: { users: number } }
 interface Response { data: { roles: Role[]; permissionCatalog: Record<string, string> } }
 const { adminSession } = useAdminSession();
+const requestConfirmation = useAdminConfirm();
 const { data, error, refresh } = await useLazyFetch<Response>("/api/admin/security/roles");
 const editing = ref<Role | "new" | null>(null);
 const key = ref(""); const name = ref(""); const description = ref(""); const selectedPermissions = ref<string[]>([]);
@@ -25,7 +26,7 @@ async function save() {
   finally { busy.value = false; }
 }
 async function remove(role: Role) {
-  if (busy.value || !confirm(`Delete ${role.name}?`)) return; busy.value = true; errorMessage.value = "";
+  if (busy.value || !await requestConfirmation({ title: `Delete ${role.name}?`, description: "This custom role will be removed permanently.", confirmLabel: "Delete role", tone: "danger" })) return; busy.value = true; errorMessage.value = "";
   try { await $fetch(`/api/admin/security/roles/${role.id}`, { method: "DELETE", headers: { "x-csrf-token": adminSession.value?.csrfToken ?? "" } }); message.value = "Role deleted."; await refresh(); }
   catch (error) { errorMessage.value = (error as { data?: { error?: { message?: string } } }).data?.error?.message ?? "Role could not be deleted."; }
   finally { busy.value = false; }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { mediaReferences } from "../../../services/media";
+import { mediaUrl } from "../../../services/media-links";
 import { apiData, apiError } from "../../../utils/api-response";
 import { requirePermission } from "../../../utils/admin-auth";
 import { useDatabase } from "../../../utils/db";
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
     size: item.size.toString(),
     references: await mediaReferences(item.id),
     contentUrl: item.status === "READY" ? `/api/admin/media/${item.id}/content` : null,
+    publicUrl: item.status === "READY" && item.visibility === "PUBLIC" ? mediaUrl(item.id) : null,
   })));
   return apiData({ items: withReferences });
 });
