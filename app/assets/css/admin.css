@@ -1,5 +1,6 @@
 .admin-shell,
-.admin-login-page {
+.admin-login-page,
+.admin-modal-backdrop {
   --admin-bg: var(--page);
   --admin-panel: var(--surface);
   --admin-raised: var(--surface-raised);
@@ -14,7 +15,7 @@
   background: var(--admin-bg);
   font-family: var(--font-sans);
 }
-.admin-shell *,.admin-login-page * { box-sizing: border-box; }
+.admin-shell *,.admin-login-page *,.admin-modal-backdrop * { box-sizing: border-box; }
 
 .admin-shell {
   display: grid;
