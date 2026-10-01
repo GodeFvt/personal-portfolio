@@ -1,10 +1,5 @@
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
-import { get } from "@vercel/blob";
 import { z } from "zod";
 import {
-  MediaProvider,
   MediaStatus,
   MediaVisibility,
   NavigationVisibility,
@@ -12,7 +7,7 @@ import {
 } from "~~/generated/prisma/client";
 import { apiError } from "../../utils/api-response";
 import { useDatabase } from "../../utils/db";
-import { getServerEnv } from "../../utils/env";
+import { mediaStorage } from "../../storage";
 
 function containsMediaId(value: unknown, mediaId: string): boolean {
   if (value === mediaId) return true;
@@ -79,33 +74,10 @@ export default defineEventHandler(async (event) => {
   setHeader(
     event,
     "Content-Disposition",
-    `${asset.mimeType === "application/pdf" ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(asset.originalName)}`,
+    `inline; filename*=UTF-8''${encodeURIComponent(asset.originalName)}`,
   );
-
-  if (asset.provider === MediaProvider.LOCAL) {
-    const base = resolve(getServerEnv().LOCAL_STORAGE_DIR);
-    const filePath = resolve(base, asset.storageKey);
-    const pathFromBase = relative(base, filePath);
-    if (pathFromBase.startsWith("..") || isAbsolute(pathFromBase)) {
-      return apiError(event, 404, { code: "NOT_FOUND", message: "Media not found." });
-    }
-    try {
-      const file = await stat(filePath);
-      setHeader(event, "Content-Length", file.size);
-      return sendStream(event, createReadStream(filePath));
-    } catch {
-      return apiError(event, 404, { code: "NOT_FOUND", message: "Media not found." });
-    }
-  }
-
-  const { BLOB_READ_WRITE_TOKEN } = getServerEnv();
-  const result = await get(asset.storageKey, {
-    access: "private",
-    ...(BLOB_READ_WRITE_TOKEN ? { token: BLOB_READ_WRITE_TOKEN } : {}),
-  });
-  if (!result || result.statusCode !== 200) {
-    return apiError(event, 404, { code: "NOT_FOUND", message: "Media not found." });
-  }
-  setHeader(event, "Content-Length", result.blob.size);
-  return sendStream(event, result.stream);
+  const object = await mediaStorage(asset.provider).read(asset.storageKey);
+  if (!object) return apiError(event, 404, { code: "NOT_FOUND", message: "Media not found." });
+  setHeader(event, "Content-Length", object.size);
+  return sendStream(event, object.stream);
 });

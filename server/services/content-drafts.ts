@@ -13,6 +13,14 @@ type Transaction = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
 export class VersionConflictError extends Error {}
 
+async function publishMediaReferences(transaction: Transaction, mediaIds: (string | null | undefined)[]) {
+  const ids = [...new Set(mediaIds.filter((id): id is string => Boolean(id)))];
+  if (!ids.length) return;
+  const ready = await transaction.mediaAsset.count({ where: { id: { in: ids }, status: "READY" } });
+  if (ready !== ids.length) throw new VersionConflictError("Selected media is missing or has not completed verification.");
+  await transaction.mediaAsset.updateMany({ where: { id: { in: ids } }, data: { visibility: "PUBLIC" } });
+}
+
 export async function publishNavigationRevisions(
   transaction: Transaction,
   revisions: { entityType: "NavigationGroup" | "PortfolioTab" | "Profile" | "Project" | "Experience" | "SkillGroup" | "SiteSettings"; entityId: string; version: number }[],
@@ -44,6 +52,9 @@ export async function publishNavigationRevisions(
       if (updated.count !== 1) throw new VersionConflictError("Navigation group changed after this draft was saved.");
     } else if (item.entityType === "PortfolioTab") {
       const snapshot = portfolioTabSnapshotSchema.parse(revision.snapshot);
+      if (snapshot.publicationState === "PUBLISHED") {
+        await publishMediaReferences(transaction, snapshot.blocks.flatMap((block) => block.props.type === "image" ? [block.props.mediaId] : []));
+      }
       const current = await transaction.portfolioTab.findUnique({ where: { id: item.entityId } });
       if (!current || current.version !== item.version - 1) {
         throw new VersionConflictError("Portfolio tab changed after this draft was saved.");
@@ -83,6 +94,7 @@ export async function publishNavigationRevisions(
       }
     } else if (item.entityType === "Profile") {
       const snapshot = profileSnapshotSchema.parse(revision.snapshot);
+      await publishMediaReferences(transaction, [snapshot.portraitMediaId, snapshot.resumeMediaId]);
       const updated = await transaction.profile.updateMany({
         where: { id: item.entityId, version: item.version - 1 },
         data: {
@@ -108,6 +120,7 @@ export async function publishNavigationRevisions(
       if (snapshot.socialLinks.length) await transaction.socialLink.createMany({ data: snapshot.socialLinks.map((entry, sortOrder) => ({ ...entry, profileId: item.entityId, sortOrder })) });
     } else if (item.entityType === "Project") {
       const snapshot = projectSnapshotSchema.parse(revision.snapshot);
+      if (snapshot.publicationState === "PUBLISHED") await publishMediaReferences(transaction, [snapshot.coverMediaId]);
       const current = await transaction.project.findUnique({ where: { id: item.entityId } });
       if (!current || current.version !== item.version - 1) throw new VersionConflictError("Project changed after this draft was saved.");
       const technologyCount = await transaction.technology.count({ where: { id: { in: snapshot.technologyIds } } });
