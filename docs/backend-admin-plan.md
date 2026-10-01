@@ -1,7 +1,7 @@
 # แผนพัฒนา Portfolio Backend & Admin
 
 วันที่: 1 ตุลาคม 2026
-สถานะ: Phase 1–2 ทำเสร็จแล้วและออก release `v1.1.0`; Phase 3 กำลังดำเนินการ โดย auth foundation, Owner bootstrap/recovery, session revocation, DB-backed login rate limit, CSRF, RBAC catalog, security read APIs, encrypted provider drafts, navigation draft/publish vertical slice และ unified Admin/Portfolio UI พร้อม System/Light/Dark theme ทำเสร็จแล้ว แต่ invitation/role mutations, live OAuth adapters และ content editors ที่เหลือยังไม่ถือว่าเสร็จ; update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
+สถานะ: Phase 1–3 ทำเสร็จแล้ว โดย auth/RBAC, invite-only OAuth onboarding, provider test/activate gate, content/navigation/block editors, private draft preview, transactional publish และ unified Admin/Portfolio UI พร้อม System/Light/Dark theme ทำงานครบ; Google และ GitHub ผ่าน live browser round-trip ใน environment ที่ตั้งค่า ส่วน Microsoft ยังไม่ถูกตั้งค่าและจึงปิดอยู่ตาม gate เดิม; update ที่เข้ากันได้จะอยู่ใน `v1.x.x` และสงวน `v2.0.0` ไว้หลังทำครบทุกเฟส
 
 ## 1. เป้าหมาย
 
@@ -482,17 +482,17 @@ Deploy checklist เพิ่มการลงทะเบียน callback �
 
 ### Phase 3 — Authentication และ Admin
 
-- [ ] Bootstrap owner, login/logout, server authorization, CSRF, distributed rate limit และ session revocation
-- [ ] ทำ Role/Permission/UserRole, protected Owner, custom roles และ `requirePermission` พร้อม delegation/last-owner guards
-- [ ] ทำหน้าจัดการ users, invitations, roles, login methods, account identities/sessions และ security audit
-- [ ] ทำ provider registry และ adapters Google/Microsoft/GitHub อ่าน config ต่อ request; เริ่มด้วย integration spike ก่อนทำฟอร์มจริง
-- [ ] ทำ encrypted secret storage, config drafts/test/activate, OAuth attempts และ callback validation ตาม protocol
-- [ ] ทำ invite-only onboarding, explicit link/unlink, re-auth และ operator recovery; ไม่ auto-link จาก email
-- [ ] สร้างหน้าจัดการ content/groups/tabs/blocks/settings พร้อม validation และ version conflict
-- [ ] ทำ draft preview, transactional publish และ audit trail
-- [ ] ผ่านเมื่อเพิ่มกลุ่ม/แท็บ custom จาก admin แล้ว publish ปรากฏหน้าเว็บโดยไม่ deploy ใหม่
-- [ ] ผ่านเมื่อ Owner มอบ Access Manager ให้จัดการ login ได้ แต่ Editor เข้า security APIs ไม่ได้ และ custom roles ไม่สามารถยกระดับสิทธิ์เกินผู้มอบ
-- [ ] ผ่านเมื่อเพิ่ม credentials ของ provider ที่รองรับจาก admin → test → activate → login บัญชีที่ได้รับอนุญาตได้ โดยไม่ deploy โค้ดใหม่
+- [x] Bootstrap owner, login/logout, server authorization, CSRF, distributed rate limit และ session revocation
+- [x] ทำ Role/Permission/UserRole, protected Owner, custom roles และ `requirePermission` พร้อม delegation/last-owner guards
+- [x] ทำหน้าจัดการ users, invitations, roles, login methods, account identities/sessions และ security audit
+- [x] ทำ provider registry และ adapters Google/Microsoft/GitHub อ่าน config ต่อ request; เริ่มด้วย integration spike ก่อนทำฟอร์มจริง
+- [x] ทำ encrypted secret storage, config drafts/test/activate, OAuth attempts และ callback validation ตาม protocol
+- [x] ทำ invite-only onboarding, explicit link/unlink, re-auth และ operator recovery; ไม่ auto-link จาก email
+- [x] สร้างหน้าจัดการ content/groups/tabs/blocks/settings พร้อม validation และ version conflict
+- [x] ทำ draft preview, transactional publish และ audit trail
+- [x] ผ่านเมื่อเพิ่มกลุ่ม/แท็บ custom จาก admin แล้ว publish ปรากฏหน้าเว็บโดยไม่ deploy ใหม่
+- [x] ผ่านเมื่อ Owner มอบ Access Manager ให้จัดการ login ได้ แต่ Editor เข้า security APIs ไม่ได้ และ custom roles ไม่สามารถยกระดับสิทธิ์เกินผู้มอบ
+- [x] ผ่านเมื่อเพิ่ม credentials ของ provider ที่รองรับจาก admin → test → activate → login บัญชีที่ได้รับอนุญาตได้ โดยไม่ deploy โค้ดใหม่ (Google และ GitHub ผ่าน; Microsoft ยังไม่มี credentials และถูกปิดตาม gate)
 
 ### Phase 4 — Media
 

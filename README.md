@@ -26,7 +26,7 @@ npm run build
 
 Open http://localhost:3000. Node 22.12+ is required. Start production with `node .output/server/index.mjs` and set `PORT` if needed. Use a Node/Nitro-capable host for the API.
 
-Before using `/admin`, run `npm run auth:setup-local-env`, `npm run db:seed`, then set temporary `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables and run `npm run admin:bootstrap`. The bootstrap refuses to run once an active Owner exists. See `docs/phase-3-auth-admin.md` for the implemented security boundary and remaining Phase 3 scope.
+Before using `/admin`, run `npm run auth:setup-local-env`, `npm run db:seed`, then set temporary `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables and run `npm run admin:bootstrap`. The bootstrap refuses to run once an active Owner exists. See `docs/phase-3-auth-admin.md` for the completed Phase 3 security, OAuth, content-editor, and publish boundary.
 
 OAuth callback URLs use `/api/auth/oauth/{provider}/callback` on the configured `NUXT_PUBLIC_SITE_URL` (for example `/api/auth/oauth/google/callback`). Save credentials as a draft in Admin → Login methods, complete the live test, and activate only the tested version. Login providers stay disabled until that sequence succeeds.
 
@@ -59,7 +59,7 @@ Ctrl/Cmd+K searches, Ctrl/Cmd+Enter sends, arrow keys navigate response tabs, an
 
 ## เปลี่ยนข้อมูลและรูป
 
-ข้อมูลที่หน้าเว็บใช้งานจริงมาจาก PostgreSQL เท่านั้น `shared/data/*` เป็น source สำหรับ seed ครั้งแรกและไม่ถูก import ใน runtime การแก้ผ่าน admin จะเริ่มใน Phase 3; ระหว่างนี้แก้ข้อมูลทดสอบผ่าน Prisma Studio ได้ และการรัน seed ซ้ำจะไม่เขียนทับ record ที่มีอยู่
+ข้อมูลที่หน้าเว็บใช้งานจริงมาจาก PostgreSQL เท่านั้น `shared/data/*` เป็น source สำหรับ seed ครั้งแรกและไม่ถูก import ใน runtime แก้ Profile, Projects, Experience, Stack, Settings, navigation และ custom-page blocks ผ่าน `/admin` โดยข้อมูลจะอยู่ใน private draft จนกว่าจะ publish; การรัน seed ซ้ำจะไม่เขียนทับ record ที่มีอยู่
 
 ปัจจุบันภาพโปรเจกต์เป็น **concept illustration** ไม่ใช่ screenshot ของระบบจริง โดยมีคำว่า CONCEPT กำกับไว้
 

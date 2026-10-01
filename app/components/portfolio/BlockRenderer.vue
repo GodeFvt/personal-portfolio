@@ -12,6 +12,13 @@ function text(key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function heading(key: "kicker" | "heading" | "description") {
+  const value = props.block.props.heading;
+  return value && typeof value === "object" && key in value && typeof (value as Record<string, unknown>)[key] === "string"
+    ? String((value as Record<string, unknown>)[key])
+    : "";
+}
+
 const links = computed(() => {
   const value = props.block.props.links;
   if (!Array.isArray(value)) return [];
@@ -60,6 +67,7 @@ const links = computed(() => {
   </section>
 
   <section v-else-if="block.type === 'project-grid'" class="ws-custom-block ws-project-gallery">
+    <div v-if="heading('heading')" class="ws-section-title"><span v-if="heading('kicker')" class="ws-kicker">{{ heading('kicker') }}</span><h2>{{ heading('heading') }}</h2><p v-if="heading('description')">{{ heading('description') }}</p></div>
     <WorkspaceProjectCard
       v-for="project in content.projects ?? []"
       :key="project.id"
@@ -69,6 +77,7 @@ const links = computed(() => {
   </section>
 
   <section v-else-if="block.type === 'timeline'" class="ws-custom-block">
+    <div v-if="heading('heading')" class="ws-section-title"><span v-if="heading('kicker')" class="ws-kicker">{{ heading('kicker') }}</span><h2>{{ heading('heading') }}</h2><p v-if="heading('description')">{{ heading('description') }}</p></div>
     <article v-for="item in content.experience ?? []" :key="item.id" class="ws-job-detail">
       <span class="ws-kicker">{{ item.period }}</span>
       <h2>{{ item.fullCompany }}</h2>
@@ -77,6 +86,7 @@ const links = computed(() => {
   </section>
 
   <section v-else-if="block.type === 'skill-group'" class="ws-custom-block ws-stack-items">
+    <div v-if="heading('heading')" class="ws-section-title"><span v-if="heading('kicker')" class="ws-kicker">{{ heading('kicker') }}</span><h2>{{ heading('heading') }}</h2><p v-if="heading('description')">{{ heading('description') }}</p></div>
     <div v-for="group in content.skillGroups ?? []" :key="group.id">
       <UIcon :name="group.icon" /><span>{{ group.label }}: {{ group.items.join(", ") }}</span>
     </div>

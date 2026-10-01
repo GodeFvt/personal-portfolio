@@ -280,10 +280,18 @@ export async function getPublicPortfolioTab(
     data.content.profile = await profileData();
   } else if (tab.template === PortfolioTemplate.CUSTOM_PAGE) {
     const types = new Set(tab.blocks.map((block) => block.type));
+    const projectGrid = tab.blocks.find((block) => block.type === PageBlockType.PROJECT_GRID);
+    const projectGridProps = projectGrid?.props && typeof projectGrid.props === "object" && !Array.isArray(projectGrid.props)
+      ? projectGrid.props as Record<string, unknown>
+      : {};
     const [projects, experiences, groups] = await Promise.all([
       types.has(PageBlockType.PROJECT_GRID)
         ? prisma.project.findMany({
-            where: { publicationState: PublicationState.PUBLISHED, archived: false },
+            where: {
+              publicationState: PublicationState.PUBLISHED,
+              ...(projectGridProps.includeArchived === true ? {} : { archived: false }),
+              ...(projectGridProps.featuredOnly === true ? { featured: true } : {}),
+            },
             orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
             include: projectInclude,
           })
