@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { apiData, apiError } from "../../utils/api-response";
 import { requirePermission } from "../../utils/admin-auth";
 
@@ -21,6 +23,6 @@ export default defineEventHandler(async (event) => {
       csrfToken: cookieSession.csrfToken,
     });
   } catch {
-    return apiError(event, 401, { code: "AUTH_REQUIRED", message: "Authentication required." });
+    return apiError(event, HttpStatus.UNAUTHORIZED, { code: ApiErrorCode.AUTH_REQUIRED, message: "Authentication required." });
   }
 });

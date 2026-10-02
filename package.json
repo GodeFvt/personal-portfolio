@@ -56,5 +56,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.9.0"
+  "version": "1.9.1"
 }

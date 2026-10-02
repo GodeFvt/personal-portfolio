@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { paginationQuerySchema } from "~~/shared/schemas/api";
 import { apiError, apiPage, paginationMeta } from "../../../../utils/api-response";
 import { requirePermission } from "../../../../utils/admin-auth";
@@ -7,11 +9,11 @@ export default defineEventHandler(async (event) => {
   setHeader(event, "cache-control", "no-store");
   try { await requirePermission(event, "users.read"); }
   catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
   const parsed = paginationQuerySchema.safeParse(getQuery(event));
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Invalid pagination." });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Invalid pagination." });
   const { page, perPage } = parsed.data;
   const db = useDatabase();
   const [items, total, invitations] = await Promise.all([

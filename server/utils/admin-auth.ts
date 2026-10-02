@@ -1,7 +1,8 @@
+import { HttpStatus } from "./http-status";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { H3Event } from "h3";
 import { createError, getHeader, getRequestIP } from "h3";
-import type { Prisma } from "~~/generated/prisma/client";
+import { AdminUserStatus, type Prisma } from "~~/generated/prisma/client";
 import type { PermissionKey } from "../auth/permissions";
 import { useDatabase } from "./db";
 import { getServerEnv } from "./env";
@@ -22,7 +23,7 @@ export function assertSameOrigin(event: H3Event) {
   const origin = getHeader(event, "origin");
   const expectedOrigin = new URL(getServerEnv().NUXT_PUBLIC_SITE_URL).origin;
   if (!origin || origin !== expectedOrigin) {
-    throw createError({ statusCode: 403, statusMessage: "Invalid request origin." });
+    throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Invalid request origin." });
   }
 }
 
@@ -39,7 +40,7 @@ export async function requireAdmin(event: H3Event) {
   const cookieSession = await getUserSession(event);
   const sessionId = cookieSession.secure?.sessionId;
   if (!cookieSession.user?.id || !sessionId) {
-    throw createError({ statusCode: 401, statusMessage: "Authentication required." });
+    throw createError({ statusCode: HttpStatus.UNAUTHORIZED, statusMessage: "Authentication required." });
   }
 
   const db = useDatabase();
@@ -61,12 +62,12 @@ export async function requireAdmin(event: H3Event) {
     session.userId === cookieSession.user.id &&
     !session.revokedAt &&
     session.expiresAt.getTime() > Date.now() &&
-    session.user.status === "ACTIVE" &&
+    session.user.status === AdminUserStatus.ACTIVE &&
     session.user.sessionVersion === cookieSession.secure?.sessionVersion;
 
   if (!valid) {
     await clearUserSession(event);
-    throw createError({ statusCode: 401, statusMessage: "Authentication required." });
+    throw createError({ statusCode: HttpStatus.UNAUTHORIZED, statusMessage: "Authentication required." });
   }
 
   const permissions = new Set<PermissionKey>();
@@ -82,7 +83,7 @@ export async function requireAdmin(event: H3Event) {
 export async function requirePermission(event: H3Event, permission: PermissionKey) {
   const admin = await requireAdmin(event);
   if (!admin.permissions.has(permission)) {
-    throw createError({ statusCode: 403, statusMessage: "Permission denied." });
+    throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Permission denied." });
   }
   return admin;
 }
@@ -92,7 +93,7 @@ export function requireFreshAuthentication(
   maxAgeMs = 5 * 60 * 1000,
 ) {
   if (Date.now() - admin.session.authenticatedAt.getTime() > maxAgeMs) {
-    throw createError({ statusCode: 403, statusMessage: "Fresh authentication required." });
+    throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Fresh authentication required." });
   }
 }
 
@@ -101,7 +102,7 @@ export async function requireCsrf(event: H3Event) {
   const cookieSession = await getUserSession(event);
   const received = getHeader(event, "x-csrf-token");
   if (!received || !cookieSession.csrfToken || !safeTokenEqual(received, cookieSession.csrfToken)) {
-    throw createError({ statusCode: 403, statusMessage: "Invalid CSRF token." });
+    throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Invalid CSRF token." });
   }
 }
 
@@ -123,7 +124,7 @@ export async function reserveLoginAttempt(event: H3Event, normalizedEmail: strin
             where: { keyHash, succeeded: false, createdAt: { gte: since } },
           });
           if (failures >= LOGIN_LIMIT) {
-            throw createError({ statusCode: 429, statusMessage: "Please try again later." });
+            throw createError({ statusCode: HttpStatus.TOO_MANY_REQUESTS, statusMessage: "Please try again later." });
           }
           return transaction.loginAttempt.create({ data: { keyHash } });
         },
@@ -142,7 +143,7 @@ export async function reserveLoginAttempt(event: H3Event, normalizedEmail: strin
       throw error;
     }
   }
-  throw createError({ statusCode: 429, statusMessage: "Please try again later." });
+  throw createError({ statusCode: HttpStatus.TOO_MANY_REQUESTS, statusMessage: "Please try again later." });
 }
 
 export async function writeAuditLog(input: {

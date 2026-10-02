@@ -1,3 +1,4 @@
+import { HttpStatus } from "../utils/http-status";
 import {
   DeleteObjectCommand,
   CreateBucketCommand,
@@ -73,7 +74,7 @@ export function createS3Storage(options: S3StorageOptions): MediaStorage {
         return typeof result.ContentLength === "number" ? { size: result.ContentLength, contentType: result.ContentType } : null;
       } catch (error) {
         const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
-        if (status === 404) return null;
+        if (status === HttpStatus.NOT_FOUND) return null;
         throw error;
       }
     },
@@ -85,7 +86,7 @@ export function createS3Storage(options: S3StorageOptions): MediaStorage {
         return { stream: nodeStream(result.Body), size: result.ContentLength };
       } catch (error) {
         const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
-        if (status === 404) return null;
+        if (status === HttpStatus.NOT_FOUND) return null;
         throw error;
       }
     },

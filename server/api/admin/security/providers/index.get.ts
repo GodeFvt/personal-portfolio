@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { apiData, apiError } from "../../../../utils/api-response";
 import { requirePermission } from "../../../../utils/admin-auth";
 import { useDatabase } from "../../../../utils/db";
@@ -8,8 +10,8 @@ export default defineEventHandler(async (event) => {
   let admin;
   try { admin = await requirePermission(event, "auth.providers.read"); }
   catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
   const [providers, currentIdentities] = await Promise.all([useDatabase().oAuthProvider.findMany({
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],

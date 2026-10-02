@@ -32,6 +32,8 @@ export const updateAdminUserSchema = z.object({
   roleIds: roleIdsSchema.min(1),
 });
 
+export type UpdateAdminUserInput = z.infer<typeof updateAdminUserSchema>;
+
 export const providerOptionsSchema = z.union([
   z.object({ type: z.literal("google") }),
   z.object({

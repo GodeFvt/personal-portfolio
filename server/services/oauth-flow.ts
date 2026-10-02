@@ -1,7 +1,9 @@
+import { HttpStatus } from "../utils/http-status";
+import { ApiErrorCode } from "../../shared/schemas/api";
 import { createHash, randomBytes } from "node:crypto";
 import type { H3Event } from "h3";
 import { createError, getQuery, sendRedirect } from "h3";
-import type { OAuthAttemptIntent, Prisma } from "../../generated/prisma/client";
+import { AdminUserStatus, type OAuthAttemptIntent, type Prisma } from "../../generated/prisma/client";
 import { oauthStartSchema } from "../../shared/schemas/admin-security";
 import { apiData, apiError } from "../utils/api-response";
 import { assertSameOrigin, requireAdmin, requireCsrf, requireFreshAuthentication, sessionExpiry } from "../utils/admin-auth";
@@ -41,19 +43,19 @@ function resultPath(intent: OAuthAttemptIntent, result: string, providerKey: str
 async function loadConfig(providerKey: string, intent: OAuthAttemptIntent) {
   const db = useDatabase();
   const provider = await db.oAuthProvider.findUnique({ where: { key: providerKey } });
-  if (!provider) throw createError({ statusCode: 404, statusMessage: "OAuth provider not found." });
+  if (!provider) throw createError({ statusCode: HttpStatus.NOT_FOUND, statusMessage: "OAuth provider not found." });
   const configVersion = intent === "TEST" ? provider.draftConfigVersion : provider.activeConfigVersion;
-  if (intent !== "TEST" && (!provider.enabled || !configVersion)) throw createError({ statusCode: 404, statusMessage: "OAuth provider is unavailable." });
-  if (!configVersion) throw createError({ statusCode: 409, statusMessage: "Save a provider draft before testing." });
+  if (intent !== "TEST" && (!provider.enabled || !configVersion)) throw createError({ statusCode: HttpStatus.NOT_FOUND, statusMessage: "OAuth provider is unavailable." });
+  if (!configVersion) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "Save a provider draft before testing." });
   const config = await db.oAuthProviderConfig.findUnique({ where: { providerId_configVersion: { providerId: provider.id, configVersion } } });
-  if (!config) throw createError({ statusCode: 409, statusMessage: "OAuth provider configuration is unavailable." });
+  if (!config) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "OAuth provider configuration is unavailable." });
   return { provider, config };
 }
 
 export async function startOAuth(event: H3Event, providerKey: string) {
   setHeader(event, "cache-control", "no-store");
   const parsed = oauthStartSchema.safeParse(await readBody(event));
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Invalid OAuth intent." });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Invalid OAuth intent." });
   const intent = parsed.data.intent;
   let admin: Awaited<ReturnType<typeof requireAdmin>> | null = null;
   let invitation: Awaited<ReturnType<typeof loadOpenInvitation>> | null = null;
@@ -66,7 +68,7 @@ export async function startOAuth(event: H3Event, providerKey: string) {
       await requireCsrf(event);
       admin = await requireAdmin(event);
       if (intent === "TEST") {
-        if (!admin.permissions.has("auth.providers.manage")) throw createError({ statusCode: 403 });
+        if (!admin.permissions.has("auth.providers.manage")) throw createError({ statusCode: HttpStatus.FORBIDDEN });
         requireFreshAuthentication(admin);
       }
     }
@@ -100,8 +102,8 @@ export async function startOAuth(event: H3Event, providerKey: string) {
     for (const [key, value] of Object.entries(request.params)) url.searchParams.set(key, value);
     return apiData({ authorizationUrl: url.toString() });
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 500;
-    if ([401, 403, 404, 409, 410].includes(status)) return apiError(event, status, { code: status === 401 ? "AUTH_REQUIRED" : status === 403 ? "REQUEST_REJECTED" : status === 404 ? "PROVIDER_UNAVAILABLE" : status === 410 ? "INVITATION_EXPIRED" : "PROVIDER_NOT_READY", message: error instanceof Error ? error.message : "OAuth could not be started." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (([HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND, HttpStatus.CONFLICT, HttpStatus.GONE] as number[]).includes(status)) return apiError(event, status, { code: status === HttpStatus.UNAUTHORIZED ? ApiErrorCode.AUTH_REQUIRED : status === HttpStatus.FORBIDDEN ? ApiErrorCode.REQUEST_REJECTED : status === HttpStatus.NOT_FOUND ? ApiErrorCode.PROVIDER_UNAVAILABLE : status === HttpStatus.GONE ? ApiErrorCode.INVITATION_EXPIRED : ApiErrorCode.PROVIDER_NOT_READY, message: error instanceof Error ? error.message : "OAuth could not be started." });
     throw error;
   }
 }
@@ -116,7 +118,7 @@ async function consumeAttempt(state: string) {
 async function assertInitiator(event: H3Event, attempt: { initiatingUserId: string | null; initiatingSessionId: string | null }) {
   const admin = await requireAdmin(event);
   if (!attempt.initiatingUserId || !attempt.initiatingSessionId || admin.user.id !== attempt.initiatingUserId || admin.session.id !== attempt.initiatingSessionId) {
-    throw createError({ statusCode: 401, statusMessage: "OAuth initiator session changed." });
+    throw createError({ statusCode: HttpStatus.UNAUTHORIZED, statusMessage: "OAuth initiator session changed." });
   }
   return admin;
 }
@@ -139,14 +141,14 @@ export async function finishOAuth(event: H3Event, providerKey: string) {
 
   try {
     const provider = await useDatabase().oAuthProvider.findUnique({ where: { id: attempt.providerId } });
-    if (!provider) throw createError({ statusCode: 404 });
+    if (!provider) throw createError({ statusCode: HttpStatus.NOT_FOUND });
     if (attempt.intent === "TEST") {
-      if (provider.draftConfigVersion !== attempt.configVersion) throw createError({ statusCode: 409 });
+      if (provider.draftConfigVersion !== attempt.configVersion) throw createError({ statusCode: HttpStatus.CONFLICT });
     } else if (!provider.enabled || provider.activeConfigVersion !== attempt.configVersion) {
-      throw createError({ statusCode: 409 });
+      throw createError({ statusCode: HttpStatus.CONFLICT });
     }
     const config = await useDatabase().oAuthProviderConfig.findUnique({ where: { providerId_configVersion: { providerId: provider.id, configVersion: attempt.configVersion } } });
-    if (!config || !attempt.pkceVerifier) throw createError({ statusCode: 409 });
+    if (!config || !attempt.pkceVerifier) throw createError({ statusCode: HttpStatus.CONFLICT });
     const identity = await completeAuthorization({
       config: { type: provider.type, clientId: config.clientId, clientSecret: decryptSecret(config.encryptedSecret), options: config.validatedConfig },
       redirectUri: redirectUri(provider.key), code: query.code, codeVerifier: attempt.pkceVerifier, nonceHash: attempt.nonceHash,
@@ -162,7 +164,7 @@ export async function finishOAuth(event: H3Event, providerKey: string) {
     }
 
     if (attempt.intent === "INVITE") {
-      if (!attempt.invitationId) throw createError({ statusCode: 409, statusMessage: "Invitation context is missing." });
+      if (!attempt.invitationId) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "Invitation context is missing." });
       const authenticatedAt = new Date();
       const login = await serializable((transaction) => acceptOAuthInvitation(transaction, {
         invitationId: attempt.invitationId!,
@@ -179,7 +181,7 @@ export async function finishOAuth(event: H3Event, providerKey: string) {
     if (attempt.intent === "LINK") {
       const admin = await assertInitiator(event, attempt);
       const existing = await useDatabase().oAuthIdentity.findUnique({ where: { providerId_issuer_subject: { providerId: provider.id, issuer: identity.issuer, subject: identity.subject } } });
-      if (existing && existing.userId !== admin.user.id) throw createError({ statusCode: 409, statusMessage: "Identity already linked." });
+      if (existing && existing.userId !== admin.user.id) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "Identity already linked." });
       const linkedIdentity = existing
         ? await useDatabase().oAuthIdentity.update({ where: { id: existing.id }, data: { displayEmail: identity.email } })
         : await useDatabase().oAuthIdentity.create({ data: { userId: admin.user.id, providerId: provider.id, issuer: identity.issuer, subject: identity.subject, displayEmail: identity.email } });
@@ -190,7 +192,7 @@ export async function finishOAuth(event: H3Event, providerKey: string) {
     if (attempt.intent === "REAUTH") {
       const admin = await assertInitiator(event, attempt);
       const linked = await useDatabase().oAuthIdentity.findUnique({ where: { providerId_issuer_subject: { providerId: provider.id, issuer: identity.issuer, subject: identity.subject } } });
-      if (!linked || linked.userId !== admin.user.id) throw createError({ statusCode: 403, statusMessage: "Use a linked identity to re-authenticate." });
+      if (!linked || linked.userId !== admin.user.id) throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Use a linked identity to re-authenticate." });
       await useDatabase().adminSession.update({ where: { id: admin.session.id }, data: { authenticatedAt: new Date() } });
       return sendRedirect(event, resultPath(attempt.intent, "reauthenticated", provider.key));
     }
@@ -198,9 +200,9 @@ export async function finishOAuth(event: H3Event, providerKey: string) {
     const authenticatedAt = new Date();
     const login = await serializable(async (transaction) => {
       const currentProvider = await transaction.oAuthProvider.findUnique({ where: { id: provider.id } });
-      if (!currentProvider?.enabled || currentProvider.activeConfigVersion !== attempt.configVersion) throw createError({ statusCode: 409, statusMessage: "Provider changed during login." });
+      if (!currentProvider?.enabled || currentProvider.activeConfigVersion !== attempt.configVersion) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "Provider changed during login." });
       const linked = await transaction.oAuthIdentity.findUnique({ where: { providerId_issuer_subject: { providerId: provider.id, issuer: identity.issuer, subject: identity.subject } }, include: { user: true } });
-      if (!linked || linked.user.status !== "ACTIVE") throw createError({ statusCode: 401, statusMessage: "This identity is not linked to an active administrator." });
+      if (!linked || linked.user.status !== AdminUserStatus.ACTIVE) throw createError({ statusCode: HttpStatus.UNAUTHORIZED, statusMessage: "This identity is not linked to an active administrator." });
       const session = await transaction.adminSession.create({ data: { userId: linked.user.id, providerId: provider.id, authMethod: "oauth", authenticatedAt, expiresAt: sessionExpiry() } });
       await transaction.auditLog.create({ data: { actorId: linked.user.id, action: "login.success", entityType: "AdminSession", entityId: session.id, metadata: { authMethod: "oauth", providerKey: provider.key, requestId: event.context.requestId } } });
       return { session, user: linked.user, authenticatedAt };
