@@ -1,14 +1,16 @@
-import { createError } from "h3";
-import type { Prisma } from "../../generated/prisma/client";
+import { AdminUserStatus, type Prisma } from "../../generated/prisma/client";
 import type { PermissionKey } from "../../shared/auth/permissions";
 import { permissionCatalog } from "../../shared/auth/permissions";
+import { ApiErrorCode } from "../../shared/schemas/api";
+import { AppError } from "../utils/app-error";
+import { HttpStatus } from "../utils/http-status";
 
 export const OWNER_ROLE_KEY = "owner";
 
 export function assertKnownPermissions(permissionKeys: string[]): asserts permissionKeys is PermissionKey[] {
   const known = new Set(Object.keys(permissionCatalog));
   if (permissionKeys.some((key) => !known.has(key))) {
-    throw createError({ statusCode: 400, statusMessage: "Unknown permission." });
+    throw new AppError({ statusCode: HttpStatus.BAD_REQUEST, code: ApiErrorCode.VALIDATION_ERROR, message: "Unknown permission." });
   }
 }
 
@@ -18,9 +20,10 @@ export function assertDelegablePermissions(
 ) {
   assertKnownPermissions(permissionKeys);
   if (permissionKeys.some((key) => !actorPermissions.has(key))) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: "A role cannot grant permissions you do not hold.",
+    throw new AppError({
+      statusCode: HttpStatus.FORBIDDEN,
+      code: ApiErrorCode.DELEGATION_DENIED,
+      message: "A role cannot grant permissions you do not hold.",
     });
   }
 }
@@ -36,12 +39,12 @@ export async function loadAssignableRoles(
     include: { permissions: true },
   });
   if (roles.length !== uniqueRoleIds.length) {
-    throw createError({ statusCode: 400, statusMessage: "One or more roles do not exist." });
+    throw new AppError({ statusCode: HttpStatus.BAD_REQUEST, code: ApiErrorCode.VALIDATION_ERROR, message: "One or more roles do not exist." });
   }
 
   for (const role of roles) {
     if (role.key === OWNER_ROLE_KEY && !actorPermissions.has("ownership.manage")) {
-      throw createError({ statusCode: 403, statusMessage: "Owner assignment is protected." });
+      throw new AppError({ statusCode: HttpStatus.FORBIDDEN, code: ApiErrorCode.DELEGATION_DENIED, message: "Owner assignment is protected." });
     }
     assertDelegablePermissions(
       actorPermissions,
@@ -63,13 +66,13 @@ export async function assertOwnerChangeAllowed(
   const otherActiveOwner = await transaction.adminUser.findFirst({
     where: {
       id: { not: input.targetUserId },
-      status: "ACTIVE",
+      status: AdminUserStatus.ACTIVE,
       roles: { some: { role: { key: OWNER_ROLE_KEY } } },
     },
     select: { id: true },
   });
   if (!otherActiveOwner) {
-    throw createError({ statusCode: 409, statusMessage: "The last active Owner cannot be removed or suspended." });
+    throw new AppError({ statusCode: HttpStatus.CONFLICT, code: ApiErrorCode.OWNER_OR_VERSION_CONFLICT, message: "The last active Owner cannot be removed or suspended." });
   }
 }
 
@@ -90,5 +93,5 @@ export async function serializable<T>(work: (transaction: Prisma.TransactionClie
       throw error;
     }
   }
-  throw createError({ statusCode: 409, statusMessage: "The access policy changed. Please try again." });
+  throw new AppError({ statusCode: HttpStatus.CONFLICT, code: ApiErrorCode.OWNER_OR_VERSION_CONFLICT, message: "The access policy changed. Please try again." });
 }

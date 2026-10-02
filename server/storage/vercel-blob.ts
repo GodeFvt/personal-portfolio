@@ -1,3 +1,4 @@
+import { HttpStatus } from "../utils/http-status";
 import { del, get, head, put } from "@vercel/blob";
 import { Readable } from "node:stream";
 import type { MediaStorage } from "./types";
@@ -27,12 +28,12 @@ export function createVercelBlobStorage(token?: string): MediaStorage {
     },
     async read(storageKey) {
       const result = await get(storageKey, { access: "private", useCache: false, ...options(token) });
-      if (!result || result.statusCode !== 200) return null;
+      if (!result || result.statusCode !== HttpStatus.OK) return null;
       return { stream: Readable.fromWeb(result.stream as never), size: result.blob.size };
     },
     async readBuffer(storageKey, maximumSize) {
       const result = await get(storageKey, { access: "private", useCache: false, ...options(token) });
-      if (!result || result.statusCode !== 200 || result.blob.size > maximumSize) return null;
+      if (!result || result.statusCode !== HttpStatus.OK || result.blob.size > maximumSize) return null;
       const chunks: Buffer[] = [];
       let total = 0;
       for await (const chunk of Readable.fromWeb(result.stream as never)) {

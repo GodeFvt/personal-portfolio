@@ -1,3 +1,6 @@
+import { AdminUserStatus } from "~~/generated/prisma/client";
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { apiData, apiError } from "../../utils/api-response";
@@ -24,13 +27,13 @@ export default defineEventHandler(async (event) => {
   try {
     assertSameOrigin(event);
   } catch {
-    return apiError(event, 403, { code: "CSRF_REJECTED", message: "Request rejected." });
+    return apiError(event, HttpStatus.FORBIDDEN, { code: ApiErrorCode.CSRF_REJECTED, message: "Request rejected." });
   }
 
   const parsed = loginSchema.safeParse(await readBody(event));
   if (!parsed.success) {
-    return apiError(event, 400, {
-      code: "VALIDATION_ERROR",
+    return apiError(event, HttpStatus.BAD_REQUEST, {
+      code: ApiErrorCode.VALIDATION_ERROR,
       message: "Please check the submitted fields.",
     });
   }
@@ -41,8 +44,8 @@ export default defineEventHandler(async (event) => {
   try {
     loginAttempt = await reserveLoginAttempt(event, email);
   } catch (error) {
-    if (typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === 429) {
-      return apiError(event, 429, { code: "RATE_LIMITED", message: "Please try again later." });
+    if (typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+      return apiError(event, HttpStatus.TOO_MANY_REQUESTS, { code: ApiErrorCode.RATE_LIMITED, message: "Please try again later." });
     }
     throw error;
   }
@@ -53,7 +56,7 @@ export default defineEventHandler(async (event) => {
       (await verifyAdminPassword(account.passwordHash, parsed.data.password)),
   );
 
-  if (!account || !passwordValid || account.status !== "ACTIVE") {
+  if (!account || !passwordValid || account.status !== AdminUserStatus.ACTIVE) {
     await db.auditLog.create({
       data: {
         actorId: account?.id,
@@ -63,8 +66,8 @@ export default defineEventHandler(async (event) => {
         metadata: { requestId: event.context.requestId },
       },
     });
-    return apiError(event, 401, {
-      code: "INVALID_CREDENTIALS",
+    return apiError(event, HttpStatus.UNAUTHORIZED, {
+      code: ApiErrorCode.INVALID_CREDENTIALS,
       message: "Email or password is incorrect.",
     });
   }

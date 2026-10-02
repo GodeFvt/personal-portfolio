@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { publishNavigationSchema } from "~~/shared/schemas/admin-content";
 import { apiData, apiError } from "../../utils/api-response";
 import { requireCsrf, requirePermission } from "../../utils/admin-auth";
@@ -11,12 +13,12 @@ export default defineEventHandler(async (event) => {
     await requireCsrf(event);
     admin = await requirePermission(event, "content.publish");
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
 
   const parsed = publishNavigationSchema.safeParse(await readBody(event));
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Please check the submitted fields." });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Please check the submitted fields." });
 
   try {
     const result = await useDatabase().$transaction(
@@ -26,7 +28,7 @@ export default defineEventHandler(async (event) => {
     return apiData(result);
   } catch (error) {
     if (error instanceof VersionConflictError || (typeof error === "object" && error && "code" in error && (error.code === "P2002" || error.code === "P2034"))) {
-      return apiError(event, 409, { code: "VERSION_CONFLICT", message: "This content changed. Reload before publishing again." });
+      return apiError(event, HttpStatus.CONFLICT, { code: ApiErrorCode.VERSION_CONFLICT, message: "This content changed. Reload before publishing again." });
     }
     throw error;
   }

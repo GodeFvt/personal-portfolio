@@ -136,6 +136,8 @@ export const saveContentDraftSchema = z.discriminatedUnion("entityType", [
   z.object({ entityType: z.literal("SiteSettings"), entityId: z.string().uuid(), expectedVersion: z.number().int().min(0), snapshot: siteSettingsSnapshotSchema }),
 ]);
 
+export type SaveContentDraftInput = z.infer<typeof saveContentDraftSchema>;
+
 export const saveNavigationDraftSchema = z.discriminatedUnion("entityType", [
   z.object({
     entityType: z.literal("NavigationGroup"),
@@ -150,6 +152,8 @@ export const saveNavigationDraftSchema = z.discriminatedUnion("entityType", [
     snapshot: portfolioTabSnapshotSchema,
   }),
 ]);
+
+export type SaveNavigationDraftInput = z.infer<typeof saveNavigationDraftSchema>;
 
 export const publishNavigationSchema = z.object({
   revisions: z.array(z.object({

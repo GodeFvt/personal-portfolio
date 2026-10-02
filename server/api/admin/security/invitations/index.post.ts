@@ -1,3 +1,6 @@
+import { AdminUserStatus } from "~~/generated/prisma/client";
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { createHash, randomBytes } from "node:crypto";
 import { createInvitationSchema } from "~~/shared/schemas/admin-security";
 import { apiData, apiError } from "../../../../utils/api-response";
@@ -12,13 +15,13 @@ export default defineEventHandler(async (event) => {
   try {
     await requireCsrf(event);
     admin = await requirePermission(event, "users.invite");
-    if (!admin.permissions.has("roles.assign")) throw createError({ statusCode: 403 });
+    if (!admin.permissions.has("roles.assign")) throw createError({ statusCode: HttpStatus.FORBIDDEN });
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
   const parsed = createInvitationSchema.safeParse(await readBody(event));
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Please check the submitted fields.", fields: parsed.error.flatten().fieldErrors });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Please check the submitted fields.", fields: parsed.error.flatten().fieldErrors });
 
   const email = normalizeAdminEmail(parsed.data.email);
   const token = randomBytes(32).toString("base64url");
@@ -28,9 +31,9 @@ export default defineEventHandler(async (event) => {
   try {
     const invitation = await serializable(async (transaction) => {
       const existing = await transaction.adminUser.findUnique({ where: { email } });
-      if (existing && existing.status !== "INVITED") throw createError({ statusCode: 409, statusMessage: "An administrator already uses this email." });
+      if (existing && existing.status !== AdminUserStatus.INVITED) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "An administrator already uses this email." });
       const roles = await loadAssignableRoles(transaction, parsed.data.roleIds, admin.permissions);
-      if (!existing) await transaction.adminUser.create({ data: { email, status: "INVITED" } });
+      if (!existing) await transaction.adminUser.create({ data: { email, status: AdminUserStatus.INVITED } });
       await transaction.userInvitation.deleteMany({ where: { normalizedEmail: email, acceptedAt: null } });
       const created = await transaction.userInvitation.create({
         data: { normalizedEmail: email, intendedRoles: roles.map(({ key }) => key), tokenHash, expiresAt, invitedById: admin.user.id },
@@ -42,8 +45,8 @@ export default defineEventHandler(async (event) => {
     const siteUrl = getServerEnv().NUXT_PUBLIC_SITE_URL.replace(/\/$/, "");
     return apiData({ invitation, acceptUrl: `${siteUrl}/admin/accept-invitation?token=${encodeURIComponent(token)}` });
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 500;
-    if ([400, 403, 409].includes(status)) return apiError(event, status, { code: status === 409 ? "ACCOUNT_EXISTS" : status === 403 ? "DELEGATION_DENIED" : "VALIDATION_ERROR", message: error instanceof Error ? error.message : "Invitation rejected." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (([HttpStatus.BAD_REQUEST, HttpStatus.FORBIDDEN, HttpStatus.CONFLICT] as number[]).includes(status)) return apiError(event, status, { code: status === HttpStatus.CONFLICT ? ApiErrorCode.ACCOUNT_EXISTS : status === HttpStatus.FORBIDDEN ? ApiErrorCode.DELEGATION_DENIED : ApiErrorCode.VALIDATION_ERROR, message: error instanceof Error ? error.message : "Invitation rejected." });
     throw error;
   }
 });

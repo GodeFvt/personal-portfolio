@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { MediaProvider, MediaStatus, MediaVisibility } from "~~/generated/prisma/client";
 import { mediaSizeLimit, startMediaUploadSchema } from "~~/shared/schemas/media";
@@ -11,13 +13,13 @@ import { getServerEnv } from "../../../utils/env";
 interface ClientPayload { id: string; uploadToken: string }
 
 function parseClientPayload(value: string | null): ClientPayload {
-  if (!value) throw createError({ statusCode: 400, statusMessage: "Upload payload is required." });
+  if (!value) throw createError({ statusCode: HttpStatus.BAD_REQUEST, statusMessage: "Upload payload is required." });
   try {
     const payload = JSON.parse(value) as ClientPayload;
     if (!payload.id || !payload.uploadToken) throw new Error();
     return payload;
   } catch {
-    throw createError({ statusCode: 400, statusMessage: "Upload payload is invalid." });
+    throw createError({ statusCode: HttpStatus.BAD_REQUEST, statusMessage: "Upload payload is invalid." });
   }
 }
 
@@ -37,10 +39,10 @@ export default defineEventHandler(async (event) => {
           const admin = await requirePermission(event, "media.write");
           const payload = parseClientPayload(clientPayload);
           if (!verifyMediaUploadToken(payload.uploadToken, { assetId: payload.id, sessionId: admin.session.id, userId: admin.user.id })) {
-            throw createError({ statusCode: 403, statusMessage: "Upload token is invalid or expired." });
+            throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: "Upload token is invalid or expired." });
           }
           const asset = await useDatabase().mediaAsset.findFirst({ where: { id: payload.id, provider: MediaProvider.VERCEL_BLOB, status: MediaStatus.PENDING } });
-          if (!asset || asset.storageKey !== pathname) throw createError({ statusCode: 409, statusMessage: "Upload reservation does not match." });
+          if (!asset || asset.storageKey !== pathname) throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "Upload reservation does not match." });
           return {
             allowedContentTypes: [asset.mimeType],
             maximumSizeInBytes: mediaSizeLimit(asset.mimeType),
@@ -60,8 +62,8 @@ export default defineEventHandler(async (event) => {
         },
       });
     } catch (error) {
-      const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 400;
-      return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "UPLOAD_REJECTED", message: error instanceof Error ? error.message : "Upload was rejected." });
+      const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.BAD_REQUEST;
+      return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.UPLOAD_REJECTED, message: error instanceof Error ? error.message : "Upload was rejected." });
     }
   }
 
@@ -70,19 +72,19 @@ export default defineEventHandler(async (event) => {
     await requireCsrf(event);
     admin = await requirePermission(event, "media.write");
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
   const parsed = startMediaUploadSchema.safeParse(body);
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "Please check the selected file." });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: parsed.error.issues[0]?.message ?? "Please check the selected file." });
   let provider: MediaProvider;
   try {
     provider = resolveUploadProvider(parsed.data.provider as UploadProviderKey | undefined);
   } catch (error) {
-    return apiError(event, 409, { code: "STORAGE_PROVIDER_UNAVAILABLE", message: error instanceof Error ? error.message : "The selected storage provider is unavailable." });
+    return apiError(event, HttpStatus.CONFLICT, { code: ApiErrorCode.STORAGE_PROVIDER_UNAVAILABLE, message: error instanceof Error ? error.message : "The selected storage provider is unavailable." });
   }
   const originalName = safeOriginalName(parsed.data.originalName);
-  if (!originalName) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "File name is required." });
+  if (!originalName) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "File name is required." });
   const storageKey = `uploads/${parsed.data.id}/${originalName}`;
   try {
     const asset = await useDatabase().mediaAsset.create({
@@ -122,7 +124,7 @@ export default defineEventHandler(async (event) => {
       handleUploadUrl: provider === MediaProvider.VERCEL_BLOB ? "/api/admin/media/upload" : undefined,
     });
   } catch (error) {
-    if (typeof error === "object" && error && "code" in error && error.code === "P2002") return apiError(event, 409, { code: "UPLOAD_CONFLICT", message: "This upload reservation already exists." });
+    if (typeof error === "object" && error && "code" in error && error.code === "P2002") return apiError(event, HttpStatus.CONFLICT, { code: ApiErrorCode.UPLOAD_CONFLICT, message: "This upload reservation already exists." });
     throw error;
   }
 });

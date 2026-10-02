@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { apiData, apiError } from "../../utils/api-response";
 import { requireAdmin, requireCsrf } from "../../utils/admin-auth";
 import { useDatabase } from "../../utils/db";
@@ -28,11 +30,11 @@ export default defineEventHandler(async (event) => {
     const status =
       typeof error === "object" && error !== null && "statusCode" in error
         ? Number(error.statusCode)
-        : 500;
-    if (status === 401) await clearUserSession(event);
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (status === HttpStatus.UNAUTHORIZED) await clearUserSession(event);
     return apiError(event, status, {
-      code: status === 403 ? "CSRF_REJECTED" : "AUTH_REQUIRED",
-      message: status === 403 ? "Request rejected." : "Authentication required.",
+      code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.CSRF_REJECTED : ApiErrorCode.AUTH_REQUIRED,
+      message: status === HttpStatus.FORBIDDEN ? "Request rejected." : "Authentication required.",
     });
   }
 });

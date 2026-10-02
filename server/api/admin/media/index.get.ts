@@ -1,3 +1,6 @@
+import { MediaStatus, MediaVisibility } from "~~/generated/prisma/client";
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { z } from "zod";
 import { mediaReferences } from "../../../services/media";
 import { mediaUrl } from "../../../services/media-links";
@@ -15,11 +18,11 @@ export default defineEventHandler(async (event) => {
   try {
     await requirePermission(event, "content.read");
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Permission denied." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required." });
   }
   const query = querySchema.safeParse(getQuery(event));
-  if (!query.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Invalid media filter." });
+  if (!query.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Invalid media filter." });
   const items = await useDatabase().mediaAsset.findMany({
     where: {
       ...(query.data.status ? { status: query.data.status } : {}),
@@ -32,8 +35,8 @@ export default defineEventHandler(async (event) => {
     ...item,
     size: item.size.toString(),
     references: await mediaReferences(item.id),
-    contentUrl: item.status === "READY" ? `/api/admin/media/${item.id}/content` : null,
-    publicUrl: item.status === "READY" && item.visibility === "PUBLIC" ? mediaUrl(item.id) : null,
+    contentUrl: item.status === MediaStatus.READY ? `/api/admin/media/${item.id}/content` : null,
+    publicUrl: item.status === MediaStatus.READY && item.visibility === MediaVisibility.PUBLIC ? mediaUrl(item.id) : null,
   })));
   return apiData({ items: withReferences });
 });

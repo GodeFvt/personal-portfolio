@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { apiData, apiError } from "../../utils/api-response";
 import { requirePermission } from "../../utils/admin-auth";
 import { useDatabase } from "../../utils/db";
@@ -10,10 +12,10 @@ export default defineEventHandler(async (event) => {
     const status =
       typeof error === "object" && error !== null && "statusCode" in error
         ? Number(error.statusCode)
-        : 401;
+        : HttpStatus.UNAUTHORIZED;
     return apiError(event, status, {
-      code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED",
-      message: status === 403 ? "Permission denied." : "Authentication required.",
+      code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED,
+      message: status === HttpStatus.FORBIDDEN ? "Permission denied." : "Authentication required.",
     });
   }
 

@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { createRoleSchema } from "~~/shared/schemas/admin-security";
 import { apiData, apiError } from "../../../../utils/api-response";
 import { requireCsrf, requirePermission } from "../../../../utils/admin-auth";
@@ -11,12 +13,12 @@ export default defineEventHandler(async (event) => {
     await requireCsrf(event);
     admin = await requirePermission(event, "roles.create");
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 401;
-    return apiError(event, status, { code: status === 403 ? "PERMISSION_DENIED" : "AUTH_REQUIRED", message: status === 403 ? "Request rejected." : "Authentication required." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.UNAUTHORIZED;
+    return apiError(event, status, { code: status === HttpStatus.FORBIDDEN ? ApiErrorCode.PERMISSION_DENIED : ApiErrorCode.AUTH_REQUIRED, message: status === HttpStatus.FORBIDDEN ? "Request rejected." : "Authentication required." });
   }
 
   const parsed = createRoleSchema.safeParse(await readBody(event));
-  if (!parsed.success) return apiError(event, 400, { code: "VALIDATION_ERROR", message: "Please check the submitted fields.", fields: parsed.error.flatten().fieldErrors });
+  if (!parsed.success) return apiError(event, HttpStatus.BAD_REQUEST, { code: ApiErrorCode.VALIDATION_ERROR, message: "Please check the submitted fields.", fields: parsed.error.flatten().fieldErrors });
 
   try {
     assertDelegablePermissions(admin.permissions, parsed.data.permissionKeys);
@@ -37,9 +39,9 @@ export default defineEventHandler(async (event) => {
     });
     return apiData({ role });
   } catch (error) {
-    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 500;
-    if (status === 403) return apiError(event, 403, { code: "DELEGATION_DENIED", message: "A role cannot grant permissions you do not hold." });
-    if (typeof error === "object" && error && "code" in error && error.code === "P2002") return apiError(event, 409, { code: "ROLE_KEY_TAKEN", message: "That role key is already in use." });
+    const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (status === HttpStatus.FORBIDDEN) return apiError(event, HttpStatus.FORBIDDEN, { code: ApiErrorCode.DELEGATION_DENIED, message: "A role cannot grant permissions you do not hold." });
+    if (typeof error === "object" && error && "code" in error && error.code === "P2002") return apiError(event, HttpStatus.CONFLICT, { code: ApiErrorCode.ROLE_KEY_TAKEN, message: "That role key is already in use." });
     throw error;
   }
 });

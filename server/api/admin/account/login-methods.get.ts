@@ -1,3 +1,5 @@
+import { HttpStatus } from "~~/server/utils/http-status";
+import { ApiErrorCode } from "~~/shared/schemas/api";
 import { apiData, apiError } from "../../../utils/api-response";
 import { requireAdmin } from "../../../utils/admin-auth";
 import { useDatabase } from "../../../utils/db";
@@ -6,7 +8,7 @@ export default defineEventHandler(async (event) => {
   setHeader(event, "cache-control", "no-store");
   let admin;
   try { admin = await requireAdmin(event); }
-  catch { return apiError(event, 401, { code: "AUTH_REQUIRED", message: "Authentication required." }); }
+  catch { return apiError(event, HttpStatus.UNAUTHORIZED, { code: ApiErrorCode.AUTH_REQUIRED, message: "Authentication required." }); }
 
   const [providers, identities] = await Promise.all([
     useDatabase().oAuthProvider.findMany({

@@ -1,6 +1,7 @@
+import { HttpStatus } from "../utils/http-status";
 import { createHash } from "node:crypto";
 import { createError } from "h3";
-import type { Prisma } from "../../generated/prisma/client";
+import { AdminUserStatus, type Prisma } from "../../generated/prisma/client";
 import type { OAuthIdentityResult } from "./oauth-adapters";
 import { assertInvitationIdentity } from "../../shared/auth/oauth-invitations";
 import { sessionExpiry } from "../utils/admin-auth";
@@ -16,7 +17,7 @@ export async function loadOpenInvitation(token: string) {
     select: { id: true, normalizedEmail: true, acceptedAt: true, expiresAt: true },
   });
   if (!invitation || invitation.acceptedAt || invitation.expiresAt.getTime() <= Date.now()) {
-    throw createError({ statusCode: 410, statusMessage: "This invitation is invalid or has expired." });
+    throw createError({ statusCode: HttpStatus.GONE, statusMessage: "This invitation is invalid or has expired." });
   }
   return invitation;
 }
@@ -34,10 +35,10 @@ export async function acceptOAuthInvitation(
 ) {
   const invitation = await transaction.userInvitation.findUnique({ where: { id: input.invitationId } });
   if (!invitation || invitation.acceptedAt || invitation.expiresAt.getTime() <= Date.now()) {
-    throw createError({ statusCode: 410, statusMessage: "This invitation is invalid or has expired." });
+    throw createError({ statusCode: HttpStatus.GONE, statusMessage: "This invitation is invalid or has expired." });
   }
   try { assertInvitationIdentity(invitation.normalizedEmail, input.identity); }
-  catch (error) { throw createError({ statusCode: 403, statusMessage: error instanceof Error ? error.message : "Invitation email verification failed." }); }
+  catch (error) { throw createError({ statusCode: HttpStatus.FORBIDDEN, statusMessage: error instanceof Error ? error.message : "Invitation email verification failed." }); }
 
   const roleKeys = Array.isArray(invitation.intendedRoles)
     ? invitation.intendedRoles.filter((value): value is string => typeof value === "string")
@@ -45,19 +46,19 @@ export async function acceptOAuthInvitation(
   const uniqueRoleKeys = [...new Set(roleKeys)];
   const roles = await transaction.role.findMany({ where: { key: { in: uniqueRoleKeys } } });
   if (!uniqueRoleKeys.length || roles.length !== uniqueRoleKeys.length) {
-    throw createError({ statusCode: 409, statusMessage: "The invitation roles are no longer available. Ask an administrator for a new invitation." });
+    throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "The invitation roles are no longer available. Ask an administrator for a new invitation." });
   }
 
   const existingIdentity = await transaction.oAuthIdentity.findUnique({
     where: { providerId_issuer_subject: { providerId: input.providerId, issuer: input.identity.issuer, subject: input.identity.subject } },
   });
   if (existingIdentity) {
-    throw createError({ statusCode: 409, statusMessage: "This provider identity is already linked." });
+    throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "This provider identity is already linked." });
   }
 
   const existingUser = await transaction.adminUser.findUnique({ where: { email: invitation.normalizedEmail } });
-  if (existingUser && existingUser.status !== "INVITED") {
-    throw createError({ statusCode: 409, statusMessage: "This invitation has already been used." });
+  if (existingUser && existingUser.status !== AdminUserStatus.INVITED) {
+    throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "This invitation has already been used." });
   }
 
   const user = existingUser
@@ -65,7 +66,7 @@ export async function acceptOAuthInvitation(
         where: { id: existingUser.id },
         data: {
           passwordHash: null,
-          status: "ACTIVE",
+          status: AdminUserStatus.ACTIVE,
           emailVerifiedAt: input.authenticatedAt,
           sessionVersion: { increment: 1 },
           authorizationVersion: { increment: 1 },
@@ -73,14 +74,14 @@ export async function acceptOAuthInvitation(
         },
       })
     : await transaction.adminUser.create({
-        data: { email: invitation.normalizedEmail, passwordHash: null, status: "ACTIVE", emailVerifiedAt: input.authenticatedAt },
+        data: { email: invitation.normalizedEmail, passwordHash: null, status: AdminUserStatus.ACTIVE, emailVerifiedAt: input.authenticatedAt },
       });
 
   const providerAlreadyLinked = await transaction.oAuthIdentity.findFirst({
     where: { userId: user.id, providerId: input.providerId },
   });
   if (providerAlreadyLinked) {
-    throw createError({ statusCode: 409, statusMessage: "This account already has a login for that provider." });
+    throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "This account already has a login for that provider." });
   }
 
   const claimed = await transaction.userInvitation.updateMany({
@@ -88,7 +89,7 @@ export async function acceptOAuthInvitation(
     data: { acceptedAt: input.authenticatedAt },
   });
   if (claimed.count !== 1) {
-    throw createError({ statusCode: 409, statusMessage: "This invitation has already been used." });
+    throw createError({ statusCode: HttpStatus.CONFLICT, statusMessage: "This invitation has already been used." });
   }
 
   await transaction.userRole.deleteMany({ where: { userId: user.id } });
