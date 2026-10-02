@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PortfolioWorkspaceView } from "~/types/portfolio";
 
+const router = useRouter();
+
 defineProps<
   Pick<
     PortfolioWorkspaceView,
@@ -38,17 +40,29 @@ defineProps<
         >
       </h1>
       <p class="ws-full-name">
-        {{ profile.name }} <span>/ {{ profile.role }}</span>
+        {{ introductionHero.fullName || profile.name }}
+        <span>/ {{ introductionHero.roleLabel || profile.role }}</span>
       </p>
       <p class="ws-intro-description">{{ introductionHero.description }}</p>
       <div class="ws-intro-actions">
         <button
           class="ws-pink-button"
-          @click="navigateTemplate('project-list')"
+          @click="
+            router.push({
+              query: { endpoint: introductionHero.primarySlug || 'projects' },
+            })
+          "
         >
           {{ introductionHero.primaryAction }}
           <UIcon name="i-lucide-arrow-up-right" /></button
-        ><button class="ws-subtle-button" @click="navigateTemplate('contact')">
+        ><button
+          class="ws-subtle-button"
+          @click="
+            router.push({
+              query: { endpoint: introductionHero.secondarySlug || 'contact' },
+            })
+          "
+        >
           {{ introductionHero.secondaryAction }}
           <UIcon name="i-lucide-arrow-right" />
         </button>

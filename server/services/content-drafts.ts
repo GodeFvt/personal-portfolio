@@ -356,8 +356,36 @@ export async function saveNavigationDraft(
           });
         }
       } else {
-        const current = await transaction.portfolioTab.findUnique({ where: { id: entityId } });
+        const current = await transaction.portfolioTab.findUnique({ where: { id: entityId }, include: { blocks: { orderBy: { sortOrder: "asc" } } } });
         if (current && current.version !== input.expectedVersion) throw draftConflict(ApiErrorCode.VERSION_CONFLICT);
+        // Navigation edits preserve content from the latest private page draft.
+        // Page content is edited through content.write, never navigation.write.
+        const pending = await transaction.contentRevision.findUnique({
+          where: {
+            entityType_entityId_version: {
+              entityType: "PortfolioTab",
+              entityId,
+              version: nextVersion,
+            },
+          },
+        });
+        const content =
+          pending && !pending.publishedAt
+            ? portfolioTabSnapshotSchema.parse(pending.snapshot)
+            : current;
+        input = {
+          ...input,
+          snapshot: {
+            ...input.snapshot,
+            template: content?.template ?? input.snapshot.template,
+            blocks: content
+              ? portfolioTabSnapshotSchema.parse({
+                  ...content,
+                  blocks: content.blocks,
+                }).blocks
+              : [],
+          },
+        };
         const [slugOwner, aliasOwner] = await Promise.all([
           transaction.portfolioTab.findFirst({
             where: { slug: input.snapshot.slug, id: { not: entityId } },
@@ -403,9 +431,9 @@ export async function saveNavigationDraft(
         },
       });
       return saved;
-    });
+    }, { isolationLevel: "Serializable" });
   } catch (error) {
-    if (isUniqueConstraintError(error)) throw draftConflict(ApiErrorCode.VERSION_CONFLICT);
+    if (isUniqueConstraintError(error) || (typeof error === "object" && error && "code" in error && error.code === "P2034")) throw draftConflict(ApiErrorCode.VERSION_CONFLICT);
     throw error;
   }
 }

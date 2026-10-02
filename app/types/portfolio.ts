@@ -89,6 +89,10 @@ export interface PortfolioWorkspaceView {
   copy: (text: string, label: string) => Promise<void>;
   pageHeading: PageHeading;
   introductionHero: PageHeading & {
+    primarySlug: string;
+    secondarySlug: string;
+    fullName: string;
+    roleLabel: string;
     primaryAction: string;
     secondaryAction: string;
   };

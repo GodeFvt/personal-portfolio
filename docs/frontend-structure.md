@@ -64,6 +64,23 @@ client SDK.
 
 ## Types and shared functions
 
+Admin Navigation owns groups, tab metadata, visibility, and deletion. Content →
+Pages owns the template and blocks for every tab, including unpublished tabs.
+`PagesContent` loads existing private revisions and uses `PageBlockEditor` for
+text, hero/headings, images, links, project grids, timelines, technology groups,
+and focus strips. Built-in layouts use their matching blocks; custom layouts
+render all blocks in order. Collection blocks reuse published records from the
+main Content sections. New empty tabs can copy content from an existing matching
+template.
+
+Page content and navigation saves merge their respective fields into the latest
+private revision. Navigation writes cannot replace page blocks. Publication uses
+the existing version checks and media validation. Tab deletion requires both
+navigation editing and publication permission, verifies the current version,
+rejects default tabs, removes dependent blocks/aliases/revisions, and records an
+audit event. It keeps shared profile, project, experience, and stack records.
+Run `npm run test:pages` for block compatibility and draft/deletion service tests.
+
 - `app/types/admin/`: response DTOs and editor models, grouped by admin feature.
 - `app/types/request-cache.ts`: request cache/history records.
 - `shared/types/portfolio-api.ts`: public API contracts used by client and server.

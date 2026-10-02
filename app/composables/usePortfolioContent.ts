@@ -48,6 +48,10 @@ export function usePortfolioContent(
       description: stringValue(props.description),
       primaryAction: stringValue(primaryAction.label),
       secondaryAction: stringValue(secondaryAction.label),
+      primarySlug: stringValue(primaryAction.tabSlug),
+      secondarySlug: stringValue(secondaryAction.tabSlug),
+      fullName: stringValue(props.fullName),
+      roleLabel: stringValue(props.roleLabel),
     };
   });
   const introductionHeadingLines = computed(() => {

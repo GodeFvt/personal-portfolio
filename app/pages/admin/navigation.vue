@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import type { NavigationDraftPayload } from "~~/shared/types/admin-api";
-import { stringValue, objectValue } from "~/lib/values";
 import { createNavigationApi } from "~/lib/api/admin/navigation";
 import { createPublicationApi } from "~/lib/api/admin/publication";
 import { apiMessage } from "~/lib/api/client";
-import type {
-  NavigationBlockEditor,
-  Revision,
-  NavigationResponse,
-} from "~/types/admin/navigation";
+import type { Revision, NavigationResponse } from "~/types/admin/navigation";
 
 type TabSnapshot = Extract<
   NavigationDraftPayload,
@@ -25,6 +20,7 @@ useSeoMeta({
 });
 
 const { adminSession } = useAdminSession();
+const confirm = useAdminConfirm();
 const { data, error, refresh } = await useApiData<NavigationResponse>(
   api.pathNavigation,
   { lazy: true, key: "admin-navigation" },
@@ -46,7 +42,6 @@ const tabExpectedVersion = ref(0);
 const tabTemplate = ref<TabSnapshot["template"]>("CUSTOM_PAGE");
 const tabPublicationState =
   ref<NonNullable<TabSnapshot["publicationState"]>>("PUBLISHED");
-const tabBlocks = ref<NavigationBlockEditor[]>([]);
 
 const canWrite = computed(() =>
   adminSession.value?.user.permissions.includes("navigation.write"),
@@ -88,32 +83,6 @@ function resetGroupForm() {
   groupVisibility.value = "VISIBLE";
 }
 
-function defaultBlock(type: string): NavigationBlockEditor {
-  if (type === "TEXT") return { type, content: "" };
-  if (type === "IMAGE") return { type, mediaId: "", alt: "" };
-  if (type === "LINK_LIST") return { type, heading: "", linksText: "" };
-  return {
-    type,
-    kicker: "",
-    heading: "",
-    description: "",
-    featuredOnly: false,
-    includeArchived: false,
-  };
-}
-
-function addBlock(type: string) {
-  tabBlocks.value.push(defaultBlock(type));
-}
-function removeBlock(index: number) {
-  tabBlocks.value.splice(index, 1);
-}
-function moveBlock(index: number, direction: -1 | 1) {
-  const target = index + direction;
-  if (target < 0 || target >= tabBlocks.value.length) return;
-  const [block] = tabBlocks.value.splice(index, 1);
-  if (block) tabBlocks.value.splice(target, 0, block);
-}
 function resetTabForm() {
   tabEditId.value = undefined;
   tabExpectedVersion.value = 0;
@@ -123,7 +92,6 @@ function resetTabForm() {
   tabIcon.value = "i-lucide-file-text";
   tabTemplate.value = "CUSTOM_PAGE";
   tabPublicationState.value = "PUBLISHED";
-  tabBlocks.value = [];
 }
 function editTab(
   tab: NavigationResponse["data"]["groups"][number]["tabs"][number],
@@ -138,100 +106,7 @@ function editTab(
   tabIcon.value = tab.icon;
   tabTemplate.value = tab.template;
   tabPublicationState.value = tab.publicationState;
-  tabBlocks.value = tab.blocks.map((block) => {
-    const props = block.props ?? {};
-    if (block.type === "LINK_LIST")
-      return {
-        type: block.type,
-        heading: stringValue(props.heading),
-        linksText: Array.isArray(props.links)
-          ? props.links
-              .map((value: unknown) => {
-                const link = objectValue(value);
-                return `${stringValue(link.label)} | ${stringValue(link.url)} | ${stringValue(link.description)}`;
-              })
-              .join("\n")
-          : "",
-      };
-    if (["PROJECT_GRID", "TIMELINE", "SKILL_GROUP"].includes(block.type)) {
-      const heading =
-        typeof props.heading === "object" && props.heading
-          ? (props.heading as Record<string, unknown>)
-          : {};
-      return {
-        type: block.type,
-        kicker: stringValue(heading.kicker),
-        heading: stringValue(heading.heading),
-        description: stringValue(heading.description),
-        featuredOnly: Boolean(props.featuredOnly),
-        includeArchived: Boolean(props.includeArchived),
-      };
-    }
-    return {
-      type: block.type,
-      content: stringValue(props.content),
-      mediaId: stringValue(props.mediaId),
-      alt: stringValue(props.alt),
-    };
-  });
   window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function blockPayload(
-  block: NavigationBlockEditor,
-): NonNullable<TabSnapshot["blocks"]>[number] {
-  if (block.type === "TEXT")
-    return {
-      type: "TEXT",
-      props: { type: "text", content: block.content ?? "" },
-    };
-  if (block.type === "IMAGE")
-    return {
-      type: "IMAGE",
-      props: {
-        type: "image",
-        mediaId: block.mediaId ?? "",
-        alt: block.alt ?? "",
-      },
-    };
-  if (block.type === "LINK_LIST")
-    return {
-      type: "LINK_LIST",
-      props: {
-        type: "link-list",
-        heading: block.heading || undefined,
-        links: (block.linksText ?? "")
-          .split("\n")
-          .map((row: string) => row.trim())
-          .filter(Boolean)
-          .map((row: string) => {
-            const [label = "", url = "", description = ""] = row
-              .split("|")
-              .map((value) => value.trim());
-            return { label, url, ...(description ? { description } : {}) };
-          }),
-      },
-    };
-  const heading = block.heading
-    ? {
-        heading: block.heading,
-        ...(block.kicker ? { kicker: block.kicker } : {}),
-        ...(block.description ? { description: block.description } : {}),
-      }
-    : undefined;
-  if (block.type === "PROJECT_GRID")
-    return {
-      type: "PROJECT_GRID",
-      props: {
-        type: "project-grid",
-        heading,
-        featuredOnly: Boolean(block.featuredOnly),
-        includeArchived: Boolean(block.includeArchived),
-      },
-    };
-  if (block.type === "TIMELINE")
-    return { type: "TIMELINE", props: { type: "timeline", heading } };
-  return { type: "SKILL_GROUP", props: { type: "skill-group", heading } };
 }
 
 async function saveGroupDraft() {
@@ -290,10 +165,7 @@ async function saveTabDraft() {
                 .find((tab) => tab.id === tabEditId.value)?.sortOrder ?? 0)
             : nextTabOrder.value,
           publicationState: tabPublicationState.value,
-          blocks:
-            tabTemplate.value === "CUSTOM_PAGE"
-              ? tabBlocks.value.map(blockPayload)
-              : [],
+          blocks: [],
         },
       },
     });
@@ -328,6 +200,34 @@ async function publish(revision: Revision) {
     notice.value =
       "Published successfully. The public API now uses this version.";
     await refresh();
+  } catch (error) {
+    formError.value = apiMessage(error);
+  } finally {
+    saving.value = false;
+  }
+}
+async function deleteTab(
+  tab: NavigationResponse["data"]["groups"][number]["tabs"][number],
+) {
+  if (
+    saving.value ||
+    !(await confirm({
+      title: `Delete /${tab.slug}?`,
+      description:
+        "This immediately removes this tab, its page content, aliases, and revisions. Shared profile, projects, experience, and stack are kept.",
+      confirmLabel: "Delete tab",
+      tone: "danger",
+    }))
+  )
+    return;
+  saving.value = true;
+  notice.value = "";
+  formError.value = "";
+  try {
+    await api.deleteTab(tab.id, { data: { expectedVersion: tab.version } });
+    if (tabEditId.value === tab.id) resetTabForm();
+    await refresh();
+    notice.value = "Tab deleted.";
   } catch (error) {
     formError.value = apiMessage(error);
   } finally {
@@ -443,7 +343,7 @@ async function publish(revision: Revision) {
           <div class="admin-field-row">
             <label class="admin-field"
               ><span>Template</span
-              ><select v-model="tabTemplate">
+              ><select v-model="tabTemplate" :disabled="Boolean(tabEditId)">
                 <option value="INTRODUCTION">Introduction</option>
                 <option value="PROJECT_LIST">Project list</option>
                 <option value="EXPERIENCE_LIST">Experience list</option>
@@ -463,114 +363,15 @@ async function publish(revision: Revision) {
           <label class="admin-field"
             ><span>Icon</span><input v-model="tabIcon" required maxlength="80"
           /></label>
-          <div v-if="tabTemplate === 'CUSTOM_PAGE'" class="admin-block-editor">
-            <div class="admin-block-toolbar">
-              <span>Page blocks</span>
-              <div>
-                <button
-                  v-for="type in [
-                    'TEXT',
-                    'IMAGE',
-                    'LINK_LIST',
-                    'PROJECT_GRID',
-                    'TIMELINE',
-                    'SKILL_GROUP',
-                  ]"
-                  :key="type"
-                  type="button"
-                  @click="addBlock(type)"
-                >
-                  + {{ type.toLowerCase().replace("_", " ") }}
-                </button>
-              </div>
-            </div>
-            <article
-              v-for="(block, index) in tabBlocks"
-              :key="`${block.type}-${index}`"
-              class="admin-block-card"
-            >
-              <header>
-                <strong>{{ index + 1 }} · {{ block.type }}</strong>
-                <div>
-                  <button
-                    type="button"
-                    :disabled="index === 0"
-                    aria-label="Move block up"
-                    @click="moveBlock(index, -1)"
-                  >
-                    ↑</button
-                  ><button
-                    type="button"
-                    :disabled="index === tabBlocks.length - 1"
-                    aria-label="Move block down"
-                    @click="moveBlock(index, 1)"
-                  >
-                    ↓</button
-                  ><button type="button" @click="removeBlock(index)">
-                    Remove
-                  </button>
-                </div>
-              </header>
-              <label v-if="block.type === 'TEXT'" class="admin-field"
-                ><span>Text</span
-                ><textarea
-                  v-model="block.content"
-                  required
-                  rows="5"
-                  maxlength="10000"
-                />
-              </label>
-              <template v-else-if="block.type === 'IMAGE'"
-                ><AdminMediaPicker
-                  v-model="block.mediaId"
-                  kind="image"
-                  label="Block image"
-                  @selected="block.alt = $event.alt" /><label
-                  class="admin-field"
-                  ><span>Alternative text</span
-                  ><input v-model="block.alt" required maxlength="300" /></label
-              ></template>
-              <template v-else-if="block.type === 'LINK_LIST'"
-                ><label class="admin-field"
-                  ><span>Heading</span><input v-model="block.heading" /></label
-                ><label class="admin-field"
-                  ><span>Links — Label | URL | Description</span
-                  ><textarea
-                    v-model="block.linksText"
-                    required
-                    rows="5"
-                  /></label
-              ></template>
-              <template v-else
-                ><label class="admin-field"
-                  ><span>Heading</span><input v-model="block.heading"
-                /></label>
-                <div class="admin-field-row">
-                  <label class="admin-field"
-                    ><span>Kicker</span><input v-model="block.kicker" /></label
-                  ><label class="admin-field"
-                    ><span>Description</span><input v-model="block.description"
-                  /></label>
-                </div>
-                <div
-                  v-if="block.type === 'PROJECT_GRID'"
-                  class="admin-toggle-row"
-                >
-                  <label
-                    ><input v-model="block.featuredOnly" type="checkbox" />
-                    Featured only</label
-                  ><label
-                    ><input v-model="block.includeArchived" type="checkbox" />
-                    Include archived</label
-                  >
-                </div></template
-              >
-            </article>
-            <p v-if="!tabBlocks.length" class="admin-muted">
-              Add one or more typed blocks. Raw HTML and scripts are not
-              accepted.
-            </p>
-          </div>
+          <p class="admin-muted">
+            Edit page content in Content → Pages after saving this tab.
+          </p>
+          <NuxtLink
+            v-if="tabEditId"
+            :to="`/admin/content?section=pages&page=${tabEditId}`"
+            class="admin-text-button"
+            >Edit page content</NuxtLink
+          >
           <button
             class="admin-primary-button"
             type="submit"
@@ -655,7 +456,16 @@ async function publish(revision: Revision) {
                     type="button"
                     @click="editTab(tab, group.id)"
                   >
-                    Edit</button
+                    Edit navigation</button
+                  ><NuxtLink :to="`/admin/content?section=pages&page=${tab.id}`"
+                    >Edit content</NuxtLink
+                  ><button
+                    v-if="canWrite && canPublish"
+                    type="button"
+                    :disabled="saving"
+                    @click="deleteTab(tab)"
+                  >
+                    Delete</button
                   ><NuxtLink
                     :to="`/api/admin/preview/${tab.id}`"
                     target="_blank"
