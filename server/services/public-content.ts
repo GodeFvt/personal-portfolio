@@ -88,7 +88,9 @@ async function profileData(): Promise<PublicProfile> {
     bio: profile.bio,
     focus: profile.focus,
     interests: Array.isArray(profile.interests)
-      ? profile.interests.filter((item): item is string => typeof item === "string")
+      ? profile.interests.filter(
+          (item): item is string => typeof item === "string",
+        )
       : [],
     location: profile.location,
     portraitUrl: profile.portraitMedia
@@ -136,7 +138,9 @@ export async function getPublicSite(): Promise<SiteApiData | null> {
       tabs: group.tabs.map(tabSummary),
     }));
   const allTabs = publicGroups.flatMap((group) => group.tabs);
-  const configuredDefault = allTabs.find((tab) => tab.id === settings.defaultTabId);
+  const configuredDefault = allTabs.find(
+    (tab) => tab.id === settings.defaultTabId,
+  );
 
   return {
     settings: {
@@ -146,7 +150,9 @@ export async function getPublicSite(): Promise<SiteApiData | null> {
       seoTitle: settings.seoTitle,
       seoDescription: settings.seoDescription,
       displayOptions:
-        settings.displayOptions && typeof settings.displayOptions === "object" && !Array.isArray(settings.displayOptions)
+        settings.displayOptions &&
+        typeof settings.displayOptions === "object" &&
+        !Array.isArray(settings.displayOptions)
           ? (settings.displayOptions as Record<string, unknown>)
           : {},
     },
@@ -174,7 +180,12 @@ export async function findPublishedTab(slug: string) {
 
 export async function getPublicPortfolioTab(
   slug: string,
-  options: { page: number; perPage: number; search?: string; category?: string },
+  options: {
+    page: number;
+    perPage: number;
+    search?: string;
+    category?: string;
+  },
 ): Promise<{ data: PortfolioApiData; total?: number } | null> {
   const prisma = useDatabase();
   const tab = await findPublishedTab(slug);
@@ -187,7 +198,9 @@ export async function getPublicPortfolioTab(
       type: block.type.toLowerCase().replaceAll("_", "-"),
       sortOrder: block.sortOrder,
       props:
-        block.props && typeof block.props === "object" && !Array.isArray(block.props)
+        block.props &&
+        typeof block.props === "object" &&
+        !Array.isArray(block.props)
           ? (block.props as Record<string, unknown>)
           : {},
     })),
@@ -198,7 +211,11 @@ export async function getPublicPortfolioTab(
     const [profile, projects] = await Promise.all([
       profileData(),
       prisma.project.findMany({
-        where: { publicationState: PublicationState.PUBLISHED, featured: true, archived: false },
+        where: {
+          publicationState: PublicationState.PUBLISHED,
+          featured: true,
+          archived: false,
+        },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
         include: projectInclude,
       }),
@@ -268,7 +285,9 @@ export async function getPublicPortfolioTab(
   } else if (tab.template === PortfolioTemplate.SKILL_LIST) {
     const groups = await prisma.skillGroup.findMany({
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      include: { technologies: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } },
+      include: {
+        technologies: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      },
     });
     data.content.skillGroups = groups.map<PublicSkillGroup>((group) => ({
       id: group.id,
@@ -280,17 +299,27 @@ export async function getPublicPortfolioTab(
     data.content.profile = await profileData();
   } else if (tab.template === PortfolioTemplate.CUSTOM_PAGE) {
     const types = new Set(tab.blocks.map((block) => block.type));
-    const projectGrid = tab.blocks.find((block) => block.type === PageBlockType.PROJECT_GRID);
-    const projectGridProps = projectGrid?.props && typeof projectGrid.props === "object" && !Array.isArray(projectGrid.props)
-      ? projectGrid.props as Record<string, unknown>
-      : {};
+    const projectGrids = tab.blocks.filter(
+      (block) => block.type === PageBlockType.PROJECT_GRID,
+    );
+    const gridOptions = projectGrids.map((block) =>
+      block.props &&
+      typeof block.props === "object" &&
+      !Array.isArray(block.props)
+        ? (block.props as Record<string, unknown>)
+        : {},
+    );
     const [projects, experiences, groups] = await Promise.all([
       types.has(PageBlockType.PROJECT_GRID)
         ? prisma.project.findMany({
             where: {
               publicationState: PublicationState.PUBLISHED,
-              ...(projectGridProps.includeArchived === true ? {} : { archived: false }),
-              ...(projectGridProps.featuredOnly === true ? { featured: true } : {}),
+              ...(gridOptions.some((props) => props.includeArchived === true)
+                ? {}
+                : { archived: false }),
+              ...(gridOptions.every((props) => props.featuredOnly === true)
+                ? { featured: true }
+                : {}),
             },
             orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
             include: projectInclude,
@@ -312,7 +341,9 @@ export async function getPublicPortfolioTab(
       types.has(PageBlockType.SKILL_GROUP)
         ? prisma.skillGroup.findMany({
             orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-            include: { technologies: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } },
+            include: {
+              technologies: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+            },
           })
         : [],
     ]);
@@ -328,7 +359,9 @@ export async function getPublicPortfolioTab(
               period: item.period,
               description: item.description,
               details: item.details.map((detail) => detail.text),
-              tags: item.technologies.map((technology) => technology.technology.name),
+              tags: item.technologies.map(
+                (technology) => technology.technology.name,
+              ),
             })),
           }
         : {}),
@@ -350,7 +383,11 @@ export async function getPublicPortfolioTab(
 
 export async function getPublicProject(slug: string) {
   const project = await useDatabase().project.findFirst({
-    where: { slug, publicationState: PublicationState.PUBLISHED, archived: false },
+    where: {
+      slug,
+      publicationState: PublicationState.PUBLISHED,
+      archived: false,
+    },
     include: projectInclude,
   });
   return project ? projectData(project) : null;
