@@ -1,25 +1,17 @@
-interface AdminSessionData {
-  user: {
-    id: string;
-    email: string;
-    roles: { key: string; name: string }[];
-    permissions: string[];
-  };
-  session: { id: string; authenticatedAt: string; expiresAt: string };
-  csrfToken: string;
-}
-
-interface AdminSessionEnvelope {
-  data: AdminSessionData;
-}
+import { createSessionApi } from "~/lib/api/admin/session";
+import type { AdminSessionData } from "~/types/admin/session";
 
 export function useAdminSession() {
-  const adminSession = useState<AdminSessionData | null>("admin-session", () => null);
-  const requestFetch = useRequestFetch();
+  const api = createSessionApi(useNuxtApp().$api);
+
+  const adminSession = useState<AdminSessionData | null>(
+    "admin-session",
+    () => null,
+  );
 
   async function load(force = false) {
     if (adminSession.value && !force) return adminSession.value;
-    const response = await requestFetch<AdminSessionEnvelope>("/api/admin/session");
+    const response = await api.getSession();
     adminSession.value = response.data;
     return response.data;
   }

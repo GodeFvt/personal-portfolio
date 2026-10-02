@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { createAuthApi } from "~/lib/api/auth";
+
+const authApi = createAuthApi(useNuxtApp().$api);
+
 const route = useRoute();
 const { adminSession, clear } = useAdminSession();
 const mobileOpen = ref(false);
@@ -15,29 +19,42 @@ const navigation = [
 const securityNavigation = [
   { label: "Users", to: "/admin/security/users", permission: "users.read" },
   { label: "Roles", to: "/admin/security/roles", permission: "roles.read" },
-  { label: "Login methods", to: "/admin/security/login-methods", permission: "auth.providers.read" },
+  {
+    label: "Login methods",
+    to: "/admin/security/login-methods",
+    permission: "auth.providers.read",
+  },
   { label: "Audit", to: "/admin/security/audit", permission: "audit.read" },
 ];
 
 const accountNavigation = [
-  { label: "My login methods", to: "/admin/account/login-methods", icon: "i-lucide-key-round" },
+  {
+    label: "My login methods",
+    to: "/admin/account/login-methods",
+    icon: "i-lucide-key-round",
+  },
 ];
 
 const visibleSecurityNavigation = computed(() =>
-  securityNavigation.filter((item) => adminSession.value?.user.permissions.includes(item.permission)),
+  securityNavigation.filter((item) =>
+    adminSession.value?.user.permissions.includes(item.permission),
+  ),
 );
 
-const allNavigation = [...navigation, ...accountNavigation, ...securityNavigation];
-const currentPage = computed(() => allNavigation.find((item) => item.to === route.path)?.label ?? "Admin");
+const allNavigation = [
+  ...navigation,
+  ...accountNavigation,
+  ...securityNavigation,
+];
+const currentPage = computed(
+  () => allNavigation.find((item) => item.to === route.path)?.label ?? "Admin",
+);
 
 async function logout() {
   if (!adminSession.value || loggingOut.value) return;
   loggingOut.value = true;
   try {
-    await $fetch("/api/auth/logout", {
-      method: "POST",
-      headers: { "x-csrf-token": adminSession.value.csrfToken },
-    });
+    await authApi.logout({});
   } finally {
     clear();
     await navigateTo("/admin/login");
@@ -45,16 +62,25 @@ async function logout() {
   }
 }
 
-watch(() => route.fullPath, () => {
-  mobileOpen.value = false;
-});
+watch(
+  () => route.fullPath,
+  () => {
+    mobileOpen.value = false;
+  },
+);
 </script>
 
 <template>
   <div class="admin-shell">
     <header class="admin-topbar">
       <div class="admin-brand-area">
-        <button class="admin-icon-button admin-menu-button" type="button" aria-label="Toggle admin navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen">
+        <button
+          class="admin-icon-button admin-menu-button"
+          type="button"
+          aria-label="Toggle admin navigation"
+          :aria-expanded="mobileOpen"
+          @click="mobileOpen = !mobileOpen"
+        >
           <UIcon :name="mobileOpen ? 'i-lucide-x' : 'i-lucide-panel-left'" />
         </button>
         <NuxtLink class="admin-brand" to="/admin">
@@ -64,12 +90,16 @@ watch(() => route.fullPath, () => {
       </div>
 
       <div class="admin-context" aria-label="Current location">
-        <span>Admin</span><UIcon name="i-lucide-chevron-right" /><strong>{{ currentPage }}</strong>
+        <span>Admin</span><UIcon name="i-lucide-chevron-right" /><strong>{{
+          currentPage
+        }}</strong>
       </div>
 
       <div class="admin-top-actions">
         <ThemeControl />
-        <NuxtLink class="admin-view-site" to="/" target="_blank">View site <UIcon name="i-lucide-arrow-up-right" /></NuxtLink>
+        <NuxtLink class="admin-view-site" to="/" target="_blank"
+          >View site <UIcon name="i-lucide-arrow-up-right"
+        /></NuxtLink>
       </div>
     </header>
 
@@ -81,19 +111,40 @@ watch(() => route.fullPath, () => {
 
       <nav class="admin-navigation" aria-label="Admin navigation">
         <p class="admin-nav-label">Content</p>
-        <NuxtLink v-for="item in navigation" :key="item.to" :to="item.to" class="admin-nav-link" :class="{ 'is-active': route.path === item.to }">
-          <UIcon :name="item.icon" /><span>{{ item.label }}</span><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
+        <NuxtLink
+          v-for="item in navigation"
+          :key="item.to"
+          :to="item.to"
+          class="admin-nav-link"
+          :class="{ 'is-active': route.path === item.to }"
+        >
+          <UIcon :name="item.icon" /><span>{{ item.label }}</span
+          ><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
         </NuxtLink>
 
         <p class="admin-nav-label">Account</p>
-        <NuxtLink v-for="item in accountNavigation" :key="item.to" :to="item.to" class="admin-nav-link" :class="{ 'is-active': route.path === item.to }">
-          <UIcon :name="item.icon" /><span>{{ item.label }}</span><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
+        <NuxtLink
+          v-for="item in accountNavigation"
+          :key="item.to"
+          :to="item.to"
+          class="admin-nav-link"
+          :class="{ 'is-active': route.path === item.to }"
+        >
+          <UIcon :name="item.icon" /><span>{{ item.label }}</span
+          ><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
         </NuxtLink>
 
         <template v-if="visibleSecurityNavigation.length">
           <p class="admin-nav-label">Security</p>
-          <NuxtLink v-for="item in visibleSecurityNavigation" :key="item.to" :to="item.to" class="admin-nav-link" :class="{ 'is-active': route.path === item.to }">
-            <UIcon name="i-lucide-shield-check" /><span>{{ item.label }}</span><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
+          <NuxtLink
+            v-for="item in visibleSecurityNavigation"
+            :key="item.to"
+            :to="item.to"
+            class="admin-nav-link"
+            :class="{ 'is-active': route.path === item.to }"
+          >
+            <UIcon name="i-lucide-shield-check" /><span>{{ item.label }}</span
+            ><UIcon class="admin-nav-arrow" name="i-lucide-chevron-right" />
           </NuxtLink>
         </template>
       </nav>
@@ -101,19 +152,37 @@ watch(() => route.fullPath, () => {
       <div class="admin-identity">
         <div>
           <strong>{{ adminSession?.user.email }}</strong>
-          <span>{{ adminSession?.user.roles.map((role) => role.name).join(' · ') }}</span>
+          <span>{{
+            adminSession?.user.roles.map((role) => role.name).join(" · ")
+          }}</span>
         </div>
-        <button class="admin-icon-button" type="button" aria-label="Log out" :disabled="loggingOut" @click="logout">
+        <button
+          class="admin-icon-button"
+          type="button"
+          aria-label="Log out"
+          :disabled="loggingOut"
+          @click="logout"
+        >
           <UIcon name="i-lucide-log-out" />
         </button>
       </div>
     </aside>
 
-    <button v-if="mobileOpen" class="admin-sidebar-scrim" type="button" aria-label="Close admin navigation" @click="mobileOpen = false" />
+    <button
+      v-if="mobileOpen"
+      class="admin-sidebar-scrim"
+      type="button"
+      aria-label="Close admin navigation"
+      @click="mobileOpen = false"
+    />
 
     <main class="admin-main">
       <slot />
     </main>
-    <AdminConfirmModal v-bind="confirmDialog.state.value" @confirm="confirmDialog.confirm" @cancel="confirmDialog.cancel" />
+    <AdminConfirmModal
+      v-bind="confirmDialog.state.value"
+      @confirm="confirmDialog.confirm"
+      @cancel="confirmDialog.cancel"
+    />
   </div>
 </template>

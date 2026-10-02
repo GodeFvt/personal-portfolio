@@ -1,59 +1,77 @@
+import { createMediaApi } from "~/lib/api/admin/media";
+import type {
+  MediaUploadProvider,
+  MediaUploadProviderOption,
+} from "~/types/admin/upload";
 import { upload } from "@vercel/blob/client";
+import axios from "axios";
+import { apiMessage } from "~/lib/api/client";
+import { mediaMimeTypeSchema } from "~~/shared/schemas/media";
 
-interface UploadReservation {
-  data: {
-    id: string;
-    provider: "local" | "vercel-blob" | "cloudflare-r2" | "minio";
-    storageKey: string;
-    uploadToken: string;
-    uploadUrl?: string;
-    handleUploadUrl?: string;
-    directUpload?: boolean;
-  };
-}
-
-export type MediaUploadProvider = "vercel-blob" | "cloudflare-r2" | "minio";
-
-export interface MediaUploadProviderOption {
-  key: MediaUploadProvider;
-  label: string;
-  enabled: boolean;
-}
-
-export async function uploadAdminMedia(file: File, alt: string, csrfToken: string, provider?: MediaUploadProvider) {
+export async function uploadAdminMedia(
+  file: File,
+  alt: string,
+  csrfToken: string,
+  provider?: MediaUploadProvider,
+) {
+  const api = createMediaApi(useNuxtApp().$api);
   const id = crypto.randomUUID();
-  const reservation = await $fetch<UploadReservation>("/api/admin/media/upload", {
-    method: "POST",
+  const reservation = await api.reserveUpload({
     headers: { "x-csrf-token": csrfToken },
-    body: { id, originalName: file.name, mimeType: file.type, size: file.size, alt, provider },
+    data: {
+      id,
+      originalName: file.name,
+      mimeType: mediaMimeTypeSchema.parse(file.type),
+      size: file.size,
+      alt,
+      provider,
+    },
   });
   const details = reservation.data;
   if (details.provider !== "vercel-blob") {
-    const response = await fetch(details.uploadUrl!, {
-      method: details.directUpload ? "PUT" : "POST",
-      credentials: details.directUpload ? "omit" : "same-origin",
-      headers: {
-        "content-type": file.type,
-        ...(!details.directUpload ? { "x-csrf-token": csrfToken, "x-media-upload-token": details.uploadToken } : {}),
-      },
-      body: file,
-    });
-    if (!response.ok) {
-      const result = details.directUpload ? null : await response.json().catch(() => null);
-      throw new Error(result?.error?.message ?? "The file could not be uploaded to the selected storage provider.");
+    // Signed storage URLs use a separate Axios request without session/CSRF defaults.
+    try {
+      await axios.request({
+        url: details.uploadUrl!,
+        method: details.directUpload ? "PUT" : "POST",
+        withCredentials: false,
+        headers: {
+          "content-type": file.type,
+          ...(!details.directUpload
+            ? {
+                "x-csrf-token": csrfToken,
+                "x-media-upload-token": details.uploadToken,
+              }
+            : {}),
+        },
+        data: file,
+      });
+    } catch (error) {
+      throw new Error(
+        apiMessage(
+          error,
+          "The file could not be uploaded to the selected storage provider.",
+        ),
+      );
     }
   } else {
     await upload(details.storageKey, file, {
       access: "private",
       handleUploadUrl: details.handleUploadUrl!,
-      clientPayload: JSON.stringify({ id: details.id, uploadToken: details.uploadToken }),
+      clientPayload: JSON.stringify({
+        id: details.id,
+        uploadToken: details.uploadToken,
+      }),
       headers: { "x-csrf-token": csrfToken },
     });
   }
-  return await $fetch<{ data: Record<string, unknown> }>("/api/admin/media/complete", {
-    method: "POST",
+  return await api.completeUpload({
     headers: { "x-csrf-token": csrfToken },
-    body: { id: details.id, uploadToken: details.uploadToken },
+    data: { id: details.id, uploadToken: details.uploadToken },
   });
 }
 
+export type {
+  MediaUploadProvider,
+  MediaUploadProviderOption,
+} from "~/types/admin/upload";
