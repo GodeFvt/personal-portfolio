@@ -1,25 +1,14 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { ApiEnvelope, PortfolioApiData } from "~~/shared/types/portfolio-api";
+import type {
+  RequestCacheEntry,
+  RequestHistoryEntry,
+} from "~/types/request-cache";
 
-export interface RequestCacheEntry {
-  requestKey: string;
-  endpoint: string;
-  response: ApiEnvelope<PortfolioApiData>;
-  headers: [string, string][];
-  status: number;
-  duration: number;
-  fetchedAt: number;
-}
-
-export interface RequestHistoryEntry {
-  id: number;
-  requestKey: string;
-  endpoint: string;
-  status: number | null;
-  duration: number;
-  createdAt: number;
-}
+export type {
+  RequestCacheEntry,
+  RequestHistoryEntry,
+} from "~/types/request-cache";
 
 export const useRequestCacheStore = defineStore("request-cache", () => {
   const responses = ref<Record<string, RequestCacheEntry>>({});
@@ -48,7 +37,8 @@ export const useRequestCacheStore = defineStore("request-cache", () => {
   }
 
   function ensureHistory(entry: RequestCacheEntry) {
-    if (history.value.some((item) => item.requestKey === entry.requestKey)) return;
+    if (history.value.some((item) => item.requestKey === entry.requestKey))
+      return;
     addHistory({
       requestKey: entry.requestKey,
       endpoint: entry.endpoint,
@@ -76,5 +66,14 @@ export const useRequestCacheStore = defineStore("request-cache", () => {
     history.value = [];
   }
 
-  return { responses, history, get, prime, remember, ensureHistory, recordFailure, clear };
+  return {
+    responses,
+    history,
+    get,
+    prime,
+    remember,
+    ensureHistory,
+    recordFailure,
+    clear,
+  };
 });

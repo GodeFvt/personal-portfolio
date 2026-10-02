@@ -8,6 +8,7 @@
     "preview": "nuxt preview",
     "postinstall": "prisma generate && nuxt prepare",
     "typecheck": "nuxt typecheck",
+    "test:frontend": "tsx --test tests/frontend-api.test.ts",
     "test:access": "tsx --test tests/access-control.test.ts",
     "test:oauth": "tsx --test tests/oauth-security.test.ts",
     "test:content": "tsx --test tests/admin-content.test.ts",
@@ -36,6 +37,7 @@
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "@vercel/blob": "2.8.0",
+    "axios": "^1.20.0",
     "jose": "^6.2.12",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "0.5.30",
@@ -56,5 +58,5 @@
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.0"
   },
-  "version": "1.9.1"
+  "version": "1.9.2"
 }
